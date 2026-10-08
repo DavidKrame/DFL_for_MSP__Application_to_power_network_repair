@@ -9,8 +9,9 @@ Figures are written to ``docs/images/``, or to the folder given with ``--out``:
 
     toy_network.png          the synthetic 5-bus network (``toy``) with its data
     budget_cost_bars.png     budgeted mean cost of every method on the 5-bus network
-                             and on case14 at s = 55, with SDDiP's simulated mean
-                             and lower bound, read from ``experiments/``
+                             and on case14 at s = 55, with SDDiP's simulated mean and
+                             lower bound and the exact 5-bus optimum as reference
+                             lines, read from ``experiments/``
 
 The generators, loads and lines of the network, with their capacities, costs,
 demands, susceptances and flow limits, are read from
@@ -224,34 +225,39 @@ def _budget_lane(folder: str, network_name: str, scale: float) -> dict:
 
 
 def draw_budget_bars(path: Path) -> None:
-    """Budgeted mean costs of the methods, with SDDiP's simulated mean and lower bound as references."""
-    order = ["NoRepair", "AlwaysRepair", "MPC", "SAA", "DFL", "SDDiP mean", "SDDiP LB"]
-    x = np.array([0, 1, 2, 3, 4, 5.4, 6.4])
-    fig, axes = plt.subplots(1, len(PANELS), figsize=(16, 6.4), sharey=True)
+    """Budgeted mean costs of the methods, with SDDiP's simulated mean and lower bound, and the
+    exact optimum on the 5-bus network, as horizontal reference lines."""
+    order = ["NoRepair", "AlwaysRepair", "MPC", "SAA", "DFL"]
+    x = np.arange(len(order))
+    exact = json.loads((REPO / "experiments" / "exact_dp_toy" / "budgeted" / "exact_dp_solution.json")
+                       .read_text())["solution"]["exact_optimal_value"]
+    fig, axes = plt.subplots(1, len(PANELS), figsize=(15, 6.4), sharey=True)
     for ax, (folder, network_name, scale, label) in zip(axes, PANELS):
         stats = _budget_lane(folder, network_name, scale)
         print(f"  {label.replace('$', '')}, DFL at {stats['n_train']:,} scenarios:")
-        for m in order:
+        for m in order + ["SDDiP mean", "SDDiP LB"]:
             print(f"    {m:13s} mean {stats[m][0]:>12,.0f}   std {stats[m][1]:>10,.0f}")
         means = np.array([stats[m][0] for m in order]) / 1e6
         errs = np.array([stats[m][1] for m in order]) / 1e6
-        colors = [METHOD_COLORS[m.split()[0]] for m in order]
-        bars = ax.bar(x, means, color=colors, edgecolor="black", lw=0.8)
-        bars[-1].set_facecolor("white")
-        bars[-1].set_hatch("///")
-        bars[-1].set_edgecolor(METHOD_COLORS["SDDiP"])
-        ax.errorbar(x[:5], means[:5], yerr=errs[:5], fmt="none", ecolor="black",
-                    capsize=5, lw=1.8, capthick=1.8)
+        ax.bar(x, means, color=[METHOD_COLORS[m] for m in order], edgecolor="black", lw=0.8,
+               yerr=errs, capsize=5, error_kw={"lw": 1.8, "capthick": 1.8})
         for xi, m, e in zip(x, means, errs):
             ax.text(xi, m + e + 0.06, f"{m:.2f}", ha="center", va="bottom", fontsize=TICK - 1, fontweight="bold")
-        ax.axvline(4.7, color="0.4", ls=":", lw=1.4)
+        lines = [(stats["SDDiP mean"][0], "-", METHOD_COLORS["SDDiP"], "SDDiP mean of its 500 simulations"),
+                 (stats["SDDiP LB"][0], "--", METHOD_COLORS["SDDiP"], "SDDiP lower bound")]
+        if folder == "toy":
+            print(f"    {'Exact DP':13s} mean {exact:>12,.0f}")
+            lines.append((exact, "-.", "black", "Exact optimum (DP)"))
+        for value, style, color, name in lines:
+            ax.axhline(value / 1e6, ls=style, color=color, lw=2.2, zorder=3,
+                       label=f"{name}: {value / 1e6:.2f}")
+        ax.legend(loc="upper left", fontsize=TICK - 3, framealpha=0.95)
         ax.set_xticks(x)
-        ax.set_xticklabels(["NoRepair", "AlwaysRepair", "MPC", "SAA", "DFL", "SDDiP\nmean", "SDDiP\nlower bound"],
-                           rotation=20, fontsize=TICK)
+        ax.set_xticklabels(order, rotation=20, fontsize=TICK)
         ax.set_xlabel(label, fontsize=LABEL, labelpad=8)
         ax.grid(True, axis="y", alpha=0.35)
         ax.set_axisbelow(True)
-        ax.set_ylim(0, 4.75)
+        ax.set_ylim(0, 5.2)
     axes[0].set_ylabel("Mean total cost (million USD)", fontsize=LABEL)
     fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
