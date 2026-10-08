@@ -60,9 +60,9 @@ In the application, $`x_t`$ is the availability of the generators and lines, $`\
 Three configurations are reported, each with and without the budget: the 5-bus network at repair-cost scale $`s = 100`$, and case14 at $`s = 45`$ and $`s = 55`$. The scale $`s`$ multiplies every repair cost, and the budget caps the repair spend of each stage at the fraction $`\varphi = 0.3`$ of the cost of repairing every component. Costs are means over 500 common test scenarios.
 
 <p align="center">
-  <img src="docs/images/mean_cost_by_method.png" width="90%" alt="Mean cost per test scenario of NoRepair, AlwaysRepair, Near-sighted MPC, SAA and DFL in the six configurations, without and with a budget; the percentage above each DFL bar is its cost relative to AlwaysRepair">
+  <img src="docs/images/budget_cost_bars.png" width="90%" alt="Mean total cost with a repair budget of NoRepair, AlwaysRepair, Near-sighted MPC, SAA and DFL on the 5-bus network and on case14 at s = 55, with SDDiP's simulated mean and lower bound as references; DFL has the lowest cost of the methods on the common test set in both panels">
 </p>
-<p align="center"><em>Mean cost per test scenario over the 500 common test scenarios, with DFL at the best training size of its sweep (five-seed mean). The percentage above each DFL bar is its cost relative to AlwaysRepair. SDDiP is not shown, because its mean comes from its own simulations, not from the common test set (<a href="#saa-and-sddip-within-the-time-limit">SAA and SDDiP within the time limit</a>).</em></p>
+<p align="center"><em>Mean total cost with the repair budget (budget fraction 0.3) on the 5-bus network at s = 100 and on case14 at s = 55. The first five bars are scored on the 500 common test scenarios, DFL at the best training size of its sweep, and the whiskers span ± one across-scenario standard deviation (for DFL, averaged over its five initializations). Right of the dotted line, as a reference, are SDDiP's mean over its own 500 policy simulations, which on case14 reuse the 256 sampled outcomes per stage of its training, and its final lower bound; neither is scored on the common test set. The exact optimum of the budgeted 5-bus problem is 1.49 million USD (<a href="#distance-to-the-exact-optimum">Distance to the exact optimum</a>).</em></p>
 
 - Under the binding budget, [DFL has the lowest mean cost of the policies scored on the common test set](#mean-cost-with-a-budget) in all three configurations, at 21.6% (5-bus), 21.7% (case14, $`s = 45`$) and 23.7% (case14, $`s = 55`$) below AlwaysRepair.
 - [Without a budget](#mean-cost-without-a-budget), the outcome depends on the cost regime. DFL is the cheapest of these policies on the 5-bus network (6.8% below AlwaysRepair). On case14, Near-sighted MPC is cheapest, and DFL costs 7.6% more than AlwaysRepair at $`s = 45`$ and 2.8% less at $`s = 55`$, two scales near the crossing point of the [repair-cost sweep](#repair-cost-sensitivity).
@@ -925,7 +925,7 @@ The parameters of this page are documented constants in [`config.py`](config.py)
 │   ├── sensitivity/             repair-cost sensitivity sweep
 │   └── exact_dp_toy/            exact DP solutions of the 5-bus network
 ├── figures/                     the figures, as drawn by paper/make_paper_figures.py
-├── docs/images/                 README figures that the paper does not have (toy_network.png, mean_cost_by_method.png)
+├── docs/images/                 README figures that the paper does not have (toy_network.png, budget_cost_bars.png)
 ├── paper/                       reproduce_paper_numbers.py, make_paper_figures.py
 ├── exact_dp/                    exact DP of the 5-bus network (exact_dp_toy.py, run_local.sh)
 ├── scripts/

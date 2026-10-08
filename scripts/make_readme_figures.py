@@ -8,8 +8,9 @@ Run from anywhere:
 Figures are written to ``docs/images/``, or to the folder given with ``--out``:
 
     toy_network.png          the synthetic 5-bus network (``toy``) with its data
-    mean_cost_by_method.png  mean test cost of each method in the six reported
-                             configurations, read from ``experiments/``
+    budget_cost_bars.png     budgeted mean cost of every method on the 5-bus network
+                             and on case14 at s = 55, with SDDiP's simulated mean
+                             and lower bound, read from ``experiments/``
 
 The generators, loads and lines of the network, with their capacities, costs,
 demands, susceptances and flow limits, are read from
@@ -177,57 +178,82 @@ def draw_toy_network(path: Path) -> None:
 
 
 # Method colours of the paper figures
-METHODS = [("NoRepair", "NoRepair", "#E06555"), ("AlwaysRepair", "AlwaysRepair", "#F2A03D"),
-           ("NearSightedMPC", "Near-sighted MPC", "#3BA287"), ("SAA", "SAA", "#9B7FB8"),
-           ("Pseudo_DFL", "DFL", "#5B8FC2")]
-LANES = [("toy", "5-bus\n$s = 100$"), ("case14", "case14\n$s = 45$"), ("case14_scale55", "case14\n$s = 55$")]
-VARIANTS = [("paper_unbudgeted", "Without a budget"), ("paper_budget0.3", "With a budget ($\\varphi = 0.3$)")]
+METHOD_COLORS = {"NoRepair": "#E06555", "AlwaysRepair": "#F2A03D", "MPC": "#3BA287",
+                 "SAA": "#9B7FB8", "DFL": "#5B8FC2", "SDDiP": "#8C8C8C"}
+BUDGETED = "paper_budget0.3"
+PANELS = [("toy", "toy", 100, "5-bus ($s$ = 100)"), ("case14_scale55", "case14", 55, "case14 ($s$ = 55)")]
 
 
-def _lane_costs(variant: str, lane: str) -> dict:
-    """Mean test cost of each method at the best training size of the DFL sweep.
+def _budget_lane(folder: str, network_name: str, scale: float) -> dict:
+    """(mean, std) of every method in the budgeted lane, in USD.
 
-    The best size is the one with the lowest five-seed DFL mean, as in the
-    results tables. SAA comes from its own folder, the other methods from the
-    aggregated ``evaluation.json`` of that size.
+    NoRepair, AlwaysRepair, Near-sighted MPC, SAA and DFL are scored on the
+    500 common test scenarios, DFL at the best training size of its sweep (the
+    lowest five-seed mean, as in the results tables). DFL's spread is the
+    across-scenario std averaged over its five seeds. SDDiP has no score on the
+    common test set: its mean is that of its own 500 policy simulations,
+    rebuilt from the saved averages as in paper/reproduce_paper_numbers.py, and
+    its lower bound is the final training bound. Neither has a saved std.
     """
-    exp = REPO / "experiments" / variant
-    sizes = []
-    for f in (exp / "dfl_scaling_multiseed" / lane).glob("dfl_train*/evaluation.json"):
-        sizes.append((json.loads(f.read_text())["Pseudo_DFL"]["mean_cost"], f))
-    best = json.loads(min(sizes)[1].read_text())
-    costs = {key: best[key]["mean_cost"] for key, _, _ in METHODS if key != "SAA"}
-    saa = json.loads((exp / lane / "SAA" / "solution.json").read_text())
-    costs["SAA"] = saa["out_of_sample_evaluation"]["mean_cost"]
-    return costs
+    sys.path.insert(0, str(REPO / "exact_dp"))
+    from exact_dp_toy import reconstruct_saved_sddip_mean
+    from model_parameters import create_model_parameters
+
+    exp = REPO / "experiments" / BUDGETED
+    sizes = [(json.loads(f.read_text())["Pseudo_DFL"]["mean_cost"], f.parent)
+             for f in (exp / "dfl_scaling_multiseed" / folder).glob("dfl_train*/evaluation.json")]
+    best_dir = min(sizes)[1]
+    ev = json.loads((best_dir / "evaluation.json").read_text())
+    seed_std = np.mean([json.loads(f.read_text())["Pseudo_DFL"]["std_cost"]
+                        for f in sorted(best_dir.glob("seed_*/evaluation.json"))])
+    saa = json.loads((exp / folder / "SAA" / "solution.json").read_text())["out_of_sample_evaluation"]
+    sddip = json.loads((exp / folder / "SDDiP" / "sddip_solution.json").read_text())
+    network = create_network(network_name)
+    params = create_model_parameters(network, seed=42, t=14, tau=1, gen_repair_base=550.0 * scale,
+                                     line_repair_base=350.0 * scale, repair_budget_fraction=0.3)
+    return {
+        "NoRepair": (ev["NoRepair"]["mean_cost"], ev["NoRepair"]["std_cost"]),
+        "AlwaysRepair": (ev["AlwaysRepair"]["mean_cost"], ev["AlwaysRepair"]["std_cost"]),
+        "MPC": (ev["NearSightedMPC"]["mean_cost"], ev["NearSightedMPC"]["std_cost"]),
+        "SAA": (saa["mean_cost"], saa["std_cost"]),
+        "DFL": (ev["Pseudo_DFL"]["mean_cost"], seed_std),
+        "SDDiP mean": (reconstruct_saved_sddip_mean(sddip, network, params), 0.0),
+        "SDDiP LB": (sddip["lower_bound"], 0.0),
+        "n_train": int(best_dir.name.replace("dfl_train", "")),
+    }
 
 
-def draw_cost_bars(path: Path) -> None:
-    """Grouped bars of the mean test cost, one panel per variant."""
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5.6), sharey=True)
-    width = 0.16
-    for ax, (variant, title) in zip(axes, VARIANTS):
-        for g, (lane, _) in enumerate(LANES):
-            costs = _lane_costs(variant, lane)
-            for m, (key, label, color) in enumerate(METHODS):
-                x = g + (m - 2) * width
-                ax.bar(x, costs[key] / 1e6, width, color=color, edgecolor="black",
-                       lw=1.6 if key == "Pseudo_DFL" else 0.6, label=label if g == 0 else None)
-            change = (costs["Pseudo_DFL"] - costs["AlwaysRepair"]) / costs["AlwaysRepair"] * 100
-            ax.text(g + 2 * width, costs["Pseudo_DFL"] / 1e6 + 0.06, f"{change:+.1f}%",
-                    ha="center", va="bottom", fontsize=TICK - 2, fontweight="bold")
-        ax.set_xticks(range(len(LANES)))
-        ax.set_xticklabels([lab for _, lab in LANES], fontsize=TICK)
-        ax.set_title(title, fontsize=LABEL)
-        ax.tick_params(axis="y", labelsize=TICK)
+def draw_budget_bars(path: Path) -> None:
+    """Budgeted mean costs of the methods, with SDDiP's simulated mean and lower bound as references."""
+    order = ["NoRepair", "AlwaysRepair", "MPC", "SAA", "DFL", "SDDiP mean", "SDDiP LB"]
+    x = np.array([0, 1, 2, 3, 4, 5.4, 6.4])
+    fig, axes = plt.subplots(1, len(PANELS), figsize=(16, 6.4), sharey=True)
+    for ax, (folder, network_name, scale, label) in zip(axes, PANELS):
+        stats = _budget_lane(folder, network_name, scale)
+        print(f"  {label.replace('$', '')}, DFL at {stats['n_train']:,} scenarios:")
+        for m in order:
+            print(f"    {m:13s} mean {stats[m][0]:>12,.0f}   std {stats[m][1]:>10,.0f}")
+        means = np.array([stats[m][0] for m in order]) / 1e6
+        errs = np.array([stats[m][1] for m in order]) / 1e6
+        colors = [METHOD_COLORS[m.split()[0]] for m in order]
+        bars = ax.bar(x, means, color=colors, edgecolor="black", lw=0.8)
+        bars[-1].set_facecolor("white")
+        bars[-1].set_hatch("///")
+        bars[-1].set_edgecolor(METHOD_COLORS["SDDiP"])
+        ax.errorbar(x[:5], means[:5], yerr=errs[:5], fmt="none", ecolor="black",
+                    capsize=5, lw=1.8, capthick=1.8)
+        for xi, m, e in zip(x, means, errs):
+            ax.text(xi, m + e + 0.06, f"{m:.2f}", ha="center", va="bottom", fontsize=TICK - 1, fontweight="bold")
+        ax.axvline(4.7, color="0.4", ls=":", lw=1.4)
+        ax.set_xticks(x)
+        ax.set_xticklabels(["NoRepair", "AlwaysRepair", "MPC", "SAA", "DFL", "SDDiP\nmean", "SDDiP\nlower bound"],
+                           rotation=20, fontsize=TICK)
+        ax.set_xlabel(label, fontsize=LABEL, labelpad=8)
         ax.grid(True, axis="y", alpha=0.35)
         ax.set_axisbelow(True)
-    axes[0].set_ylabel("Mean cost per test scenario (million USD)", fontsize=LABEL - 2)
-    axes[0].set_ylim(0, 4.2)
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="lower center", ncol=len(METHODS), fontsize=TICK, frameon=False,
-               bbox_to_anchor=(0.5, -0.04))
-    fig.tight_layout(rect=(0, 0.07, 1, 1))
+        ax.set_ylim(0, 4.75)
+    axes[0].set_ylabel("Mean total cost (million USD)", fontsize=LABEL)
+    fig.tight_layout()
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=150, bbox_inches="tight", pad_inches=0.15, facecolor="white")
     plt.close(fig)
@@ -246,7 +272,7 @@ def main() -> None:
     out = parser.parse_args().out.resolve()
     print("Writing figures to", _shown(out))
     draw_toy_network(out / "toy_network.png")
-    draw_cost_bars(out / "mean_cost_by_method.png")
+    draw_budget_bars(out / "budget_cost_bars.png")
 
 
 if __name__ == "__main__":
