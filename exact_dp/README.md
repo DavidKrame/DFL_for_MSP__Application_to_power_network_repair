@@ -46,27 +46,29 @@ The default settings of the script are those of the 5-bus experiments.
 2. Outcomes. The failures of a stage hit only operational components. A component whose repair completes at this stage comes back without being exposed to them, and a failed component without a repair stays failed. After the failures, the network is described by a binary availability mask $`a \in \{0,1\}^7`$, one of $`2^7 = 128`$. For each state, the script enumerates all failure patterns of its operational components with their Bernoulli probabilities, so the expectations are computed exactly, without sampling.
 3. Stage cost. The loads and generation costs do not vary across stages, so the DC-OPF cost $`Q^0(a)`$ depends only on the availability mask $`a`$. The script solves the 128 LPs once, with the same `StagewiseOPF` that the DFL and baseline rollouts use, and reuses the solutions at all stages.
 4. Recombination. Failures are independent across stages and components, so the future depends on the history only through the current state. Histories that lead to the same state are merged, and the recursion keeps one value per stage and state. A scenario tree of the same problem would have $`128^{14} \approx 3.2 \times 10^{29}`$ leaves.
-5. Recursion. With $`\mathcal{V}_{15} \equiv 0`$ and $`t = 14, \dots, 1`$,
 
-   ```math
-   \begin{aligned}
-   \mathcal{V}_t(x) &= \sum_{a \in \mathcal{A}(x)} P_t(a \mid x)\, \mathcal{V}^{\mathrm{post}}_t(a),\\[6pt]
-   \mathcal{V}^{\mathrm{post}}_t(a) &= Q^0(a) + \min_{r \in \mathcal{Y}(a)} \Big(\beta^\top r + \mathcal{V}_{t+1}\big(\mathrm{next}(a, r)\big)\Big),\\[6pt]
-   \mathcal{A}(x) &= \big\{\, a \in \{0,1\}^7 \,:\, a[k] = 0 \text{ for } k \in D(x),\ \ a[k] = 1 \text{ for } k \in R(x) \,\big\},\\[6pt]
-   \mathcal{Y}(a) &= \big\{\, r \in \{0,1\}^7 \,:\, r \le \mathbf{1} - a,\ \ \beta^\top r \le B \,\big\},\\[6pt]
-   P_t(a \mid x) &= \prod_{k \in U(x)} \big(\lambda^t[k]\big)^{1 - a[k]}\,\big(1 - \lambda^t[k]\big)^{a[k]},
-   \end{aligned}
-   ```
+5\. Recursion. With $`\mathcal{V}_{15} \equiv 0`$ and $`t = 14, \dots, 1`$,
 
-   where $`x`$ is the state of step 1, equivalent to the pair $`(a^{t-1}, r^{t-1})`$ of the previous availability and repairs, and $`a`$ is the availability mask after the failures. $`\mathcal{V}_t(x)`$ is the optimal expected cost from stage $`t`$ to the end in state $`x`$, before the failures of stage $`t`$, and $`\mathcal{V}^{\mathrm{post}}_t(a)`$ the optimal expected cost from the same stage on, once these failures have produced mask $`a`$. $`U(x)`$, $`D(x)`$ and $`R(x)`$ are the sets of components that are operational, failed without a repair, and failed with a pending repair in $`x`$. $`\mathcal{A}(x)`$ holds the $`2^{\lvert U(x) \rvert}`$ masks that the failures of stage $`t`$ can produce from $`x`$, and $`P_t(a \mid x)`$ is the probability of mask $`a`$. $`Q^0(a)`$ is the stage cost of step 3, $`r`$ the 0/1 vector of the failed components to repair, $`\beta^\top r`$ the cost of these repairs, and $`\mathrm{next}(a, r)`$ the next state, the pair $`(a, r)`$, in which available components are operational, repaired ones pending and the others failed. Without a budget the condition $`\beta^\top r \le B`$ is dropped, and the minimum runs over all subsets of the failed components. The optimum $`\mathcal{V}^\star`$ is $`\mathcal{V}_1`$ at the state in which all components are operational.
+```math
+\begin{aligned}
+\mathcal{V}_t(x) &= \sum_{a \in \mathcal{A}(x)} P_t(a \mid x)\, \mathcal{V}^{\mathrm{post}}_t(a),\\[6pt]
+\mathcal{V}^{\mathrm{post}}_t(a) &= Q^0(a) + \min_{r \in \mathcal{Y}(a)} \Big(\beta^\top r + \mathcal{V}_{t+1}\big(\mathrm{next}(a, r)\big)\Big),\\[6pt]
+\mathcal{A}(x) &= \big\{\, a \in \{0,1\}^7 \,:\, a[k] = 0 \text{ for } k \in D(x),\ \ a[k] = 1 \text{ for } k \in R(x) \,\big\},\\[6pt]
+\mathcal{Y}(a) &= \big\{\, r \in \{0,1\}^7 \,:\, r \le \mathbf{1} - a,\ \ \beta^\top r \le B \,\big\},\\[6pt]
+P_t(a \mid x) &= \prod_{k \in U(x)} \big(\lambda^t[k]\big)^{1 - a[k]}\,\big(1 - \lambda^t[k]\big)^{a[k]},
+\end{aligned}
+```
 
-   The [decision rule of the DFL policy](../README.md#decision-rule) writes the cost-to-go as a function of the availability after the failures, $`\mathcal{V}_{t+1}(a^{t+1})`$, which is $`\mathcal{V}^{\mathrm{post}}_{t+1}(a^{t+1})`$ here. With $`\tau = 1`$, the value $`\mathcal{V}_{t+1}`$ of the state $`(a^t, r^t)`$ reached after the repairs of stage $`t`$ is the expectation that the decision rule approximates, given the failure events $`\xi^1, \dots, \xi^t`$ observed so far and the repairs $`r^t`$:
+where $`x`$ is the state of step 1, equivalent to the pair $`(a^{t-1}, r^{t-1})`$ of the previous availability and repairs, and $`a`$ is the availability mask after the failures. $`\mathcal{V}_t(x)`$ is the optimal expected cost from stage $`t`$ to the end in state $`x`$, before the failures of stage $`t`$, and $`\mathcal{V}^{\mathrm{post}}_t(a)`$ the optimal expected cost from the same stage on, once these failures have produced mask $`a`$. $`U(x)`$, $`D(x)`$ and $`R(x)`$ are the sets of components that are operational, failed without a repair, and failed with a pending repair in $`x`$. $`\mathcal{A}(x)`$ holds the $`2^{\lvert U(x) \rvert}`$ masks that the failures of stage $`t`$ can produce from $`x`$, and $`P_t(a \mid x)`$ is the probability of mask $`a`$. $`Q^0(a)`$ is the stage cost of step 3, $`r`$ the 0/1 vector of the failed components to repair, $`\beta^\top r`$ the cost of these repairs, and $`\mathrm{next}(a, r)`$ the next state, the pair $`(a, r)`$, in which available components are operational, repaired ones pending and the others failed. Without a budget the condition $`\beta^\top r \le B`$ is dropped, and the minimum runs over all subsets of the failed components. The optimum $`\mathcal{V}^\star`$ is $`\mathcal{V}_1`$ at the state in which all components are operational.
 
-   ```math
-   \mathcal{V}_{t+1}\big((a^t, r^t)\big) \;=\; \mathbb{E}\Big[\,\mathcal{V}^{\mathrm{post}}_{t+1}\big(a^{t+1}\big) \;\Big|\; \xi^1,\dots,\xi^t,\ r^t\Big]
-   ```
+The [decision rule of the DFL policy](../README.md#decision-rule) writes the cost-to-go as a function of the availability after the failures, $`\mathcal{V}_{t+1}(a^{t+1})`$, which is $`\mathcal{V}^{\mathrm{post}}_{t+1}(a^{t+1})`$ here. With $`\tau = 1`$, the value $`\mathcal{V}_{t+1}`$ of the state $`(a^t, r^t)`$ reached after the repairs of stage $`t`$ is the expectation that the decision rule approximates, given the failure events $`\xi^1, \dots, \xi^t`$ observed so far and the repairs $`r^t`$:
 
-   The state and action sets are finite and each decision uses only the information available at its stage, so this backward induction gives the minimum expected cost over all non-anticipative policies. The only approximation is the numerical tolerance of the LP solver.
+```math
+\mathcal{V}_{t+1}\big((a^t, r^t)\big) \;=\; \mathbb{E}\Big[\,\mathcal{V}^{\mathrm{post}}_{t+1}\big(a^{t+1}\big) \;\Big|\; \xi^1,\dots,\xi^t,\ r^t\Big]
+```
+
+The state and action sets are finite and each decision uses only the information available at its stage, so this backward induction gives the minimum expected cost over all non-anticipative policies. The only approximation is the numerical tolerance of the LP solver.
+
 6. Checks. The script then propagates the state distribution forward under the optimal policy, again exactly, and recomputes the expected cost. It stops with an error if the forward and backward values differ by more than $`10^{-7} \times \max(1, \lvert \mathcal{V}^\star \rvert)`$, if a transition distribution does not sum to one, if the policy repairs an operational component, or if it exceeds the budget. In the stored results the two values differ by $`4.7 \times 10^{-10}`$ (unbudgeted) and $`2.3 \times 10^{-10}`$ (budgeted).
 
 The computation is small: 128 LPs, 229,376 transition terms, and 30,618 evaluations of a repair set without the budget or 14,784 with it. Without the budget, each stage evaluates every subset of the failed components of each mask. A mask with $`j`$ available components has $`2^{7-j}`$ such subsets, so a stage makes $`\sum_{j=0}^{7} \binom{7}{j}\, 2^{7-j} = (2 + 1)^7 = 3^7 = 2{,}187`$ evaluations, and the 14 stages make 30,618. Each variant takes less than a second.
