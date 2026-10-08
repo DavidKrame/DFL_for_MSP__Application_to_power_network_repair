@@ -9,9 +9,8 @@ Figures are written to ``docs/images/``, or to the folder given with ``--out``:
 
     toy_network.png          the synthetic 5-bus network (``toy``) with its data
     budget_cost_bars.png     budgeted mean cost of every method on the 5-bus network
-                             and on case14 at s = 55, with SDDiP's simulated mean and
-                             lower bound and the exact 5-bus optimum as reference
-                             lines, read from ``experiments/``
+                             and on case14 at s = 55, with the exact 5-bus optimum
+                             as a reference line, read from ``experiments/``
 
 The generators, loads and lines of the network, with their capacities, costs,
 demands, susceptances and flow limits, are read from
@@ -180,26 +179,19 @@ def draw_toy_network(path: Path) -> None:
 
 # Method colours of the paper figures
 METHOD_COLORS = {"NoRepair": "#E06555", "AlwaysRepair": "#F2A03D", "MPC": "#3BA287",
-                 "SAA": "#9B7FB8", "DFL": "#5B8FC2", "SDDiP": "#8C8C8C"}
+                 "SAA": "#9B7FB8", "DFL": "#5B8FC2"}
 BUDGETED = "paper_budget0.3"
-PANELS = [("toy", "toy", 100, "5-bus ($s$ = 100)"), ("case14_scale55", "case14", 55, "case14 ($s$ = 55)")]
+PANELS = [("toy", "5-bus ($s$ = 100)"), ("case14_scale55", "case14 ($s$ = 55)")]
 
 
-def _budget_lane(folder: str, network_name: str, scale: float) -> dict:
+def _budget_lane(folder: str) -> dict:
     """(mean, std) of every method in the budgeted lane, in USD.
 
     NoRepair, AlwaysRepair, Near-sighted MPC, SAA and DFL are scored on the
     500 common test scenarios, DFL at the best training size of its sweep (the
     lowest five-seed mean, as in the results tables). DFL's spread is the
-    across-scenario std averaged over its five seeds. SDDiP has no score on the
-    common test set: its mean is that of its own 500 policy simulations,
-    rebuilt from the saved averages as in paper/reproduce_paper_numbers.py, and
-    its lower bound is the final training bound. Neither has a saved std.
+    across-scenario std averaged over its five seeds.
     """
-    sys.path.insert(0, str(REPO / "exact_dp"))
-    from exact_dp_toy import reconstruct_saved_sddip_mean
-    from model_parameters import create_model_parameters
-
     exp = REPO / "experiments" / BUDGETED
     sizes = [(json.loads(f.read_text())["Pseudo_DFL"]["mean_cost"], f.parent)
              for f in (exp / "dfl_scaling_multiseed" / folder).glob("dfl_train*/evaluation.json")]
@@ -208,34 +200,27 @@ def _budget_lane(folder: str, network_name: str, scale: float) -> dict:
     seed_std = np.mean([json.loads(f.read_text())["Pseudo_DFL"]["std_cost"]
                         for f in sorted(best_dir.glob("seed_*/evaluation.json"))])
     saa = json.loads((exp / folder / "SAA" / "solution.json").read_text())["out_of_sample_evaluation"]
-    sddip = json.loads((exp / folder / "SDDiP" / "sddip_solution.json").read_text())
-    network = create_network(network_name)
-    params = create_model_parameters(network, seed=42, t=14, tau=1, gen_repair_base=550.0 * scale,
-                                     line_repair_base=350.0 * scale, repair_budget_fraction=0.3)
     return {
         "NoRepair": (ev["NoRepair"]["mean_cost"], ev["NoRepair"]["std_cost"]),
         "AlwaysRepair": (ev["AlwaysRepair"]["mean_cost"], ev["AlwaysRepair"]["std_cost"]),
         "MPC": (ev["NearSightedMPC"]["mean_cost"], ev["NearSightedMPC"]["std_cost"]),
         "SAA": (saa["mean_cost"], saa["std_cost"]),
         "DFL": (ev["Pseudo_DFL"]["mean_cost"], seed_std),
-        "SDDiP mean": (reconstruct_saved_sddip_mean(sddip, network, params), 0.0),
-        "SDDiP LB": (sddip["lower_bound"], 0.0),
         "n_train": int(best_dir.name.replace("dfl_train", "")),
     }
 
 
 def draw_budget_bars(path: Path) -> None:
-    """Budgeted mean costs of the methods, with SDDiP's simulated mean and lower bound, and the
-    exact optimum on the 5-bus network, as horizontal reference lines."""
+    """Budgeted mean costs of the methods, with the exact optimum of the 5-bus network as a reference line."""
     order = ["NoRepair", "AlwaysRepair", "MPC", "SAA", "DFL"]
     x = np.arange(len(order))
     exact = json.loads((REPO / "experiments" / "exact_dp_toy" / "budgeted" / "exact_dp_solution.json")
                        .read_text())["solution"]["exact_optimal_value"]
     fig, axes = plt.subplots(1, len(PANELS), figsize=(15, 6.4), sharey=True)
-    for ax, (folder, network_name, scale, label) in zip(axes, PANELS):
-        stats = _budget_lane(folder, network_name, scale)
+    for ax, (folder, label) in zip(axes, PANELS):
+        stats = _budget_lane(folder)
         print(f"  {label.replace('$', '')}, DFL at {stats['n_train']:,} scenarios:")
-        for m in order + ["SDDiP mean", "SDDiP LB"]:
+        for m in order:
             print(f"    {m:13s} mean {stats[m][0]:>12,.0f}   std {stats[m][1]:>10,.0f}")
         means = np.array([stats[m][0] for m in order]) / 1e6
         errs = np.array([stats[m][1] for m in order]) / 1e6
@@ -243,15 +228,11 @@ def draw_budget_bars(path: Path) -> None:
                yerr=errs, capsize=5, error_kw={"lw": 1.8, "capthick": 1.8})
         for xi, m, e in zip(x, means, errs):
             ax.text(xi, m + e + 0.06, f"{m:.2f}", ha="center", va="bottom", fontsize=TICK - 1, fontweight="bold")
-        lines = [(stats["SDDiP mean"][0], "-", METHOD_COLORS["SDDiP"], "SDDiP mean of its 500 simulations"),
-                 (stats["SDDiP LB"][0], "--", METHOD_COLORS["SDDiP"], "SDDiP lower bound")]
         if folder == "toy":
             print(f"    {'Exact DP':13s} mean {exact:>12,.0f}")
-            lines.append((exact, "-.", "black", "Exact optimum (DP)"))
-        for value, style, color, name in lines:
-            ax.axhline(value / 1e6, ls=style, color=color, lw=2.2, zorder=3,
-                       label=f"{name}: {value / 1e6:.2f}")
-        ax.legend(loc="upper left", fontsize=TICK - 3, framealpha=0.95)
+            ax.axhline(exact / 1e6, ls="-.", color="black", lw=2.2, zorder=3,
+                       label=f"Exact optimum (DP): {exact / 1e6:.2f}")
+            ax.legend(loc="upper left", fontsize=TICK - 3, framealpha=0.95)
         ax.set_xticks(x)
         ax.set_xticklabels(order, rotation=20, fontsize=TICK)
         ax.set_xlabel(label, fontsize=LABEL, labelpad=8)
