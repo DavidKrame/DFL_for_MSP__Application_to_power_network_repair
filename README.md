@@ -96,13 +96,13 @@ Notation: stages are numbered $`t = 1, \dots, T`$ with $`T = 14`$. The index $`k
 
 ### Failures
 
-Failure events are independent across components and stages, with $`\xi^t[k] \sim \operatorname{Bernoulli}(\lambda^t[k])`$. An event fails component $`k`$ only if it is in service, so $`\lambda^t[k]`$ is the failure probability of an operational component. Its logit is a log-linear function of the stage, scaled so that the curve peaks at stage $`t^*`$ with value $`p_{\max}[k]`$:
+Failure events are independent across components and stages, with $`\xi^t[k] \sim \mathrm{Bernoulli}(\lambda^t[k])`$. An event fails component $`k`$ only if it is in service, so $`\lambda^t[k]`$ is the failure probability of an operational component. Its logit is a log-linear function of the stage, scaled so that the curve peaks at stage $`t^*`$ with value $`p_{\max}[k]`$:
 
 ```math
-\operatorname{logit}\lambda^t[k] \;=\; \operatorname{logit}\bigl(p_{\max}[k]\bigr)\,
+\mathrm{logit}\,\lambda^t[k] \;=\; \mathrm{logit}\bigl(p_{\max}[k]\bigr)\,
 \frac{(t^* + K)\ln(t + K) - t}{(t^* + K)\ln(t^* + K) - t^*},
 \qquad
-\operatorname{logit} p = \ln\frac{p}{1 - p}
+\mathrm{logit}\,p = \ln\frac{p}{1 - p}
 ```
 
 The fraction equals 1 at $`t = t^*`$, has zero slope there and decreases afterwards, so for $`p_{\max}[k] > 1/2`$ the probability peaks at stage $`t^*`$ with value $`p_{\max}[k]`$ and then decays towards zero. The experiments use $`K = 1.5`$ and $`t^* = 1`$. With $`t^* = 1`$, the denominator is $`(1 + K)\ln(1 + K) - 1`$, which is positive for $`K`$ above about 0.763 and equals 1.29 at $`K = 1.5`$. Each component is *standard*, with $`p_{\max}[k] \sim \mathcal{U}[0.55, 0.70]`$, or *elevated*, with $`p_{\max}[k] \sim \mathcal{U}[0.80, 0.90]`$, with probability 1/2 each. The class and $`p_{\max}[k]`$ of a component are drawn once with the model seed, 42 in all experiments. The curve is a synthetic choice and is not calibrated to weather data. `ModelParameters` in [`model_parameters.py`](model_parameters.py) computes it, with the constants in [`config.py`](config.py).
@@ -139,7 +139,7 @@ Q^0(a^t) \;=\; \min_{p_g^t,\,\theta^t,\,f^t,\,d^t}\quad
 & c^\top p_g^t + \alpha\,\mathbf{1}^\top\big(p_l - d^t\big)\\
 \text{s.t.}\quad
 & C f^t = S_g\,p_g^t - S_l\,d^t,\\
-& {-(\mathbf{1} - a_e^t)\odot M} \le f^t - \operatorname{diag}(b)\,C^\top\theta^t \le (\mathbf{1} - a_e^t)\odot M,\\
+& {-(\mathbf{1} - a_e^t)\odot M} \le f^t - \mathrm{diag}(b)\,C^\top\theta^t \le (\mathbf{1} - a_e^t)\odot M,\\
 & a_e^t \odot \underline{f} \le f^t \le a_e^t \odot \overline{f},\\
 & \mathbf{0} \le p_g^t \le a_g^t \odot \overline{p}_g,
 \qquad \mathbf{0} \le d^t \le p_l,\\
@@ -161,7 +161,7 @@ b_j\big(\theta^t[\mathrm{from}(j)] - \theta^t[\mathrm{to}(j)]\big) & \text{if li
 \end{cases}
 ```
 
-Here $`p_g^t`$, $`\theta^t`$ and $`f^t`$ are the generator outputs, the voltage angles of the buses and the line flows, and $`d^t`$ is the served demand. $`c`$ is the generation cost, $`\overline{p}_g`$ the generator capacity, $`\underline{f} = -\overline{f}`$ and $`\overline{f}`$ the flow limits of the lines, $`\alpha`$ the value of lost load, $`p_l`$ the demand and $`\mathrm{ref}`$ the reference bus. $`C`$ is the bus-line incidence matrix (+1 where a line leaves a bus, −1 where it enters), $`S_g`$ and $`S_l`$ place generators and loads at buses, and $`\operatorname{diag}(b)`$ holds the line susceptances (the paper calls this matrix $`B`$, a letter kept here for the repair budget). The vector $`M`$ holds the big-M constant of each line, unrelated to the number $`M`$ of perturbations under [Training](#training).
+Here $`p_g^t`$, $`\theta^t`$ and $`f^t`$ are the generator outputs, the voltage angles of the buses and the line flows, and $`d^t`$ is the served demand. $`c`$ is the generation cost, $`\overline{p}_g`$ the generator capacity, $`\underline{f} = -\overline{f}`$ and $`\overline{f}`$ the flow limits of the lines, $`\alpha`$ the value of lost load, $`p_l`$ the demand and $`\mathrm{ref}`$ the reference bus. $`C`$ is the bus-line incidence matrix (+1 where a line leaves a bus, −1 where it enters), $`S_g`$ and $`S_l`$ place generators and loads at buses, and $`\mathrm{diag}(b)`$ holds the line susceptances (the paper calls this matrix $`B`$, a letter kept here for the repair budget). The vector $`M`$ holds the big-M constant of each line, unrelated to the number $`M`$ of perturbations under [Training](#training).
 
 For a failed line, the flow bounds force zero flow, and the big-M rows only require $`\lvert b_j(\theta^t[\mathrm{from}(j)] - \theta^t[\mathrm{to}(j)])\rvert \le 2\theta^{\max} b_j`$, which the angle bounds already imply. A failed line therefore does not couple its end angles, and for a given availability the stage problem is the DC-OPF of the energized subnetwork. A failed generator produces nothing, and since minimum outputs are zero, every availability pattern has a feasible dispatch.
 
@@ -186,9 +186,9 @@ The expectation runs over the failure process, and only failed components can be
 
 ```math
 \begin{aligned}
-\beta_g[i] &= 550\,s\,\frac{\overline{p}_g[i]}{\operatorname{mean}(\overline{p}_g)},
+\beta_g[i] &= 550\,s\,\frac{\overline{p}_g[i]}{\mathrm{mean}(\overline{p}_g)},
 \qquad
-\beta_e[j] = 350\,s\,\frac{\overline{f}[j]}{\operatorname{mean}(\overline{f})},\\[6pt]
+\beta_e[j] = 350\,s\,\frac{\overline{f}[j]}{\mathrm{mean}(\overline{f})},\\[6pt]
 B &= \varphi\,\mathbf{1}^\top\beta = \varphi\,s\,\big(550\,N_G + 350\,N_E\big),
 \qquad \beta^\top r^t \le B \ \text{ at every stage}
 \end{aligned}
@@ -246,7 +246,7 @@ $`\mathcal{V}_{t+1}`$ is the optimal expected cost from stage $`t + 1`$ on, $`\b
 
 ```math
 \begin{aligned}
-r^t &\in \operatorname*{arg\,max}_{r \in \{0,1\}^{N_G+N_E}}\ \big(\boldsymbol{\mu}^t - \beta\big)^\top r
+r^t &\in \arg\max_{r \in \{0,1\}^{N_G+N_E}}\ \big(\boldsymbol{\mu}^t - \beta\big)^\top r
 \quad\text{s.t.}\quad r \le \mathbf{1} - a^t,\\[4pt]
 \eta^t &= \boldsymbol{\mu}^t - \beta = \pi_{\boldsymbol{\psi}}\big(a_g^t,\ a_e^t,\ t/T\big)
 \end{aligned}
@@ -265,7 +265,7 @@ r^t[k] =
 With the budget, the stage problem is a 0/1 knapsack with values $`\eta^t[k]`$, weights $`\beta[k]`$ and capacity $`B`$, over the feasible set $`\mathcal{Y}_t`$:
 
 ```math
-r^t \in \operatorname*{arg\,max}_{r \in \mathcal{Y}_t}\ (\eta^t)^\top r,
+r^t \in \arg\max_{r \in \mathcal{Y}_t}\ (\eta^t)^\top r,
 \qquad
 \mathcal{Y}_t = \big\{ r \in \{0,1\}^{N_G+N_E} : r \le \mathbf{1} - a^t,\ \beta^\top r \le B \big\}
 ```
@@ -282,7 +282,7 @@ A label is a hard 0/1 decision, so the network is fitted through a smoothed deci
 \begin{aligned}
 \hat r_\varepsilon(\eta)[k] &= \sigma\big(\eta[k]/\varepsilon\big)\,\big(1 - a^t[k]\big)
   && \text{without a budget},\\[4pt]
-\hat r_\varepsilon(\eta) &\approx \frac{1}{M}\sum_{m=1}^{M}\ \operatorname*{arg\,max}_{r \in \mathcal{Y}_t}\ \big(\eta + \varepsilon Z_m\big)^\top r,
+\hat r_\varepsilon(\eta) &\approx \frac{1}{M}\sum_{m=1}^{M}\ \arg\max_{r \in \mathcal{Y}_t}\ \big(\eta + \varepsilon Z_m\big)^\top r,
   \quad Z_m \sim \mathcal{N}(0, I)
   && \text{with a budget}
 \end{aligned}
@@ -293,13 +293,13 @@ Without a budget, the noise is logistic and the expectation has the closed form 
 ```math
 \begin{aligned}
 \mathcal{L}(\boldsymbol{\psi}) &= \frac{1}{\lvert\mathcal{I}\rvert}\sum_{(i,t) \in \mathcal{I}}
-\Big(\operatorname{sg}\bigl[\hat r_\varepsilon(\eta_i^t)\bigr] - r_i^{*,t}\Big)^{\!\top} \eta_i^t,
+\Big(\mathrm{sg}\bigl[\hat r_\varepsilon(\eta_i^t)\bigr] - r_i^{*,t}\Big)^{\!\top} \eta_i^t,
 \qquad \eta_i^t = \pi_{\boldsymbol{\psi}}\big(a_i^{*,t},\ t/T\big),\\[4pt]
 \frac{\partial \mathcal{L}}{\partial \eta_i^t} &= \frac{1}{\lvert\mathcal{I}\rvert}\Big(\hat r_\varepsilon(\eta_i^t) - r_i^{*,t}\Big)
 \end{aligned}
 ```
 
-Here $`\hat r_\varepsilon`$ uses the availability $`a^t = a_i^{*,t}`$ of the row. The stop-gradient $`\operatorname{sg}[\cdot]`$ holds the smoothed decision constant (it is computed under `torch.no_grad()`), so back-propagation passes the Fenchel-Young gradient, smoothed decision minus label, to the network. The loss value itself is not the Fenchel-Young loss and can be negative; it is the value shown in the training logs. Under the budget, the Gaussian draws come from NumPy's unseeded global state, which is why budgeted reruns differ slightly ([Seeds and reproducibility](#seeds-and-reproducibility)). `FenchelYoungLoss` in [`Pseudo_DFL_model.py`](Pseudo_DFL_model.py) implements the loss, and [`Pseudo_DFL_training.py`](Pseudo_DFL_training.py) the training loop.
+Here $`\hat r_\varepsilon`$ uses the availability $`a^t = a_i^{*,t}`$ of the row. The stop-gradient $`\mathrm{sg}[\cdot]`$ holds the smoothed decision constant (it is computed under `torch.no_grad()`), so back-propagation passes the Fenchel-Young gradient, smoothed decision minus label, to the network. The loss value itself is not the Fenchel-Young loss and can be negative; it is the value shown in the training logs. Under the budget, the Gaussian draws come from NumPy's unseeded global state, which is why budgeted reruns differ slightly ([Seeds and reproducibility](#seeds-and-reproducibility)). `FenchelYoungLoss` in [`Pseudo_DFL_model.py`](Pseudo_DFL_model.py) implements the loss, and [`Pseudo_DFL_training.py`](Pseudo_DFL_training.py) the training loop.
 
 <details>
 <summary>Why the gradient is the smoothed decision minus the label</summary>
@@ -309,7 +309,7 @@ For a linear objective over a finite feasible set $`\mathcal{Y}`$, perturbation 
 ```math
 \begin{aligned}
 F_\varepsilon(\eta) &= \mathbb{E}_{Z}\Big[\max_{u \in \mathcal{Y}}\ (\eta + \varepsilon Z)^\top u\Big],\\
-\hat u_\varepsilon(\eta) &= \nabla F_\varepsilon(\eta) = \mathbb{E}_{Z}\Big[\operatorname*{arg\,max}_{u \in \mathcal{Y}}\ (\eta + \varepsilon Z)^\top u\Big],\\
+\hat u_\varepsilon(\eta) &= \nabla F_\varepsilon(\eta) = \mathbb{E}_{Z}\Big[\arg\max_{u \in \mathcal{Y}}\ (\eta + \varepsilon Z)^\top u\Big],\\
 L_\varepsilon(\eta;\, u^*) &= F_\varepsilon(\eta) + \varepsilon\,\Omega(u^*) - \eta^\top u^* \;\ge\; 0,\\
 \nabla_\eta L_\varepsilon(\eta;\, u^*) &= \hat u_\varepsilon(\eta) - u^*
 \end{aligned}
@@ -364,7 +364,7 @@ A schedule $`S`$ lists the components whose repair it orders at each window step
 \quad j = 0, \dots, L_t - 2,\\[4pt]
 \widehat{J}_t(S) &= \sum_{j=0}^{L_t - 1} \Big[\,Q^0\big(\bar a^{(j)}\big) + \beta^\top \mathbf{1}[S_j]\Big],
 \qquad
-r^t = \mathbf{1}[S_0^\star],\quad S^\star \in \operatorname*{arg\,min}_{S \in \mathcal{S}_t}\ \widehat{J}_t(S)
+r^t = \mathbf{1}[S_0^\star],\quad S^\star \in \arg\min_{S \in \mathcal{S}_t}\ \widehat{J}_t(S)
 \end{aligned}
 ```
 
@@ -390,7 +390,7 @@ With $`\mathcal{N}_t`$ the $`2^t`$ nodes of stage $`t`$, the MILP minimizes the 
 Out of sample, the policy moves at every stage to the child whose sampled failure vector $`\hat\xi^{\,m}`$ is closest to the realized one, taking the first child on ties, and applies that child's repairs to the components that are actually failed:
 
 ```math
-n^t = \operatorname*{arg\,min}_{m\,\in\,\operatorname{children}(n^{t-1})}\ \big\lVert \hat\xi^{\,m} - \xi^t \big\rVert_1,
+n^t = \arg\min_{m\,\in\,\mathrm{children}(n^{t-1})}\ \big\lVert \hat\xi^{\,m} - \xi^t \big\rVert_1,
 \qquad
 r^t = r^{n^t} \odot \big(\mathbf{1} - a^t\big),
 \qquad

@@ -354,7 +354,7 @@ The quantities of this table derive from the total cost $`C_i`$ of test scenario
 ```math
 \bar c = \frac{1}{500}\sum_{i=1}^{500} C_i,
 \qquad
-\operatorname{std} = \sqrt{\frac{1}{500}\sum_{i=1}^{500}\big(C_i - \bar c\big)^2}.
+\mathrm{std} = \sqrt{\frac{1}{500}\sum_{i=1}^{500}\big(C_i - \bar c\big)^2}.
 ```
 
 In an aggregated file, the `Pseudo_DFL` entry holds instead the five-seed mean and the across-seed standard deviation,
@@ -362,7 +362,7 @@ In an aggregated file, the `Pseudo_DFL` entry holds instead the five-seed mean a
 ```math
 \bar c_{\mathrm{DFL}} = \frac{1}{5}\sum_{j=1}^{5} \bar c_{\mathrm{DFL}}^{(j)},
 \qquad
-\operatorname{std}_{\mathrm{seed}} = \sqrt{\frac{1}{5}\sum_{j=1}^{5}\big(\bar c_{\mathrm{DFL}}^{(j)} - \bar c_{\mathrm{DFL}}\big)^2},
+\mathrm{std}_{\mathrm{seed}} = \sqrt{\frac{1}{5}\sum_{j=1}^{5}\big(\bar c_{\mathrm{DFL}}^{(j)} - \bar c_{\mathrm{DFL}}\big)^2},
 ```
 
 where $`\bar c_{\mathrm{DFL}}^{(j)}`$ is the mean cost of the model with the $`j`$-th init seed. The ratios, all reported in percent, are

@@ -171,10 +171,10 @@ The failure probability $`\lambda^t[k]`$ of component $`k`$ at stage $`t`$ follo
 
 ```math
 \begin{aligned}
-\operatorname{logit}\lambda^t[k] &= A[k]\ln(t + K) - B[k]\,t,
+\mathrm{logit}\,\lambda^t[k] &= A[k]\ln(t + K) - B[k]\,t,
 \qquad\text{that is}\qquad
 \lambda^t[k] = \frac{1}{1 + (t + K)^{-A[k]}\, e^{B[k]\,t}},\\[6pt]
-B[k] &= \frac{\operatorname{logit}(p_{\max}[k])}{\delta},
+B[k] &= \frac{\mathrm{logit}(p_{\max}[k])}{\delta},
 \qquad
 A[k] = (t^* + K)\, B[k],
 \qquad
