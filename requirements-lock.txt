@@ -1,0 +1,55 @@
+# Exact package versions of a Python 3.11 environment in which the test suite
+# passes, scripts/quick_check.sh succeeds and paper/reproduce_paper_numbers.py
+# matches every reported number. Use it when the looser bounds in
+# requirements.txt pull in a newer release that breaks something:
+#
+#     python3.11 -m venv .venv && source .venv/bin/activate
+#     pip install -r requirements-lock.txt
+#
+# python3.11 must be installed first (system package manager, python.org, pyenv,
+# conda or `uv python install 3.11`).
+#
+# Gurobi (gurobipy) is optional and not listed; see requirements.txt.
+contourpy==1.3.3
+cycler==0.12.1
+deepdiff==8.6.2
+filelock==3.32.7
+fonttools==4.66.1
+fsspec==2026.9.0
+geojson==3.3.0
+highspy==1.15.1
+iniconfig==2.3.0
+jinja2==3.1.6
+juliacall==0.9.36
+juliapkg==0.1.27
+kiwisolver==1.5.1
+lxml==6.1.3
+markupsafe==3.0.4
+matplotlib==3.10.6
+matpowercaseframes==2.1.1
+mpmath==1.3.0
+networkx==3.6.1
+numpy==2.4.6
+orderly-set==5.5.0
+packaging==25.0
+pandapower==3.2.1
+pandas==2.3.3
+pillow==12.3.0
+pluggy==1.6.0
+pygments==2.21.0
+pyomo==6.10.1
+pyparsing==3.3.3
+pytest==9.1.1
+python-dateutil==2.9.0.post0
+pytz==2026.5
+scipy==1.17.1
+semver==3.1.0
+setuptools==84.0.0
+six==1.17.0
+sympy==1.14.0
+tomli==2.4.1
+tomlkit==0.15.1
+torch==2.14.1
+tqdm==4.70.1
+typing-extensions==4.16.0
+tzdata==2026.5

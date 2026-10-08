@@ -1,0 +1,21 @@
+{
+    "julia": "1.10",
+    "packages": {
+        "SDDP": {
+            "uuid": "f4570300-c277-11e8-125c-4912f86ce65d",
+            "version": "1"
+        },
+        "JuMP": {
+            "uuid": "4076af6c-e467-56ae-b986-b466b2749572",
+            "version": "1"
+        },
+        "HiGHS": {
+            "uuid": "87dc4568-4c63-4d18-b0c0-bb2238e4078b",
+            "version": "1"
+        },
+        "JSON": {
+            "uuid": "682c06a0-de6a-54ab-a142-c8b1cf79cde6",
+            "version": "0.21"
+        }
+    }
+}

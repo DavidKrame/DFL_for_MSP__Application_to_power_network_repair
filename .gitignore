@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Virtual environments (the SLURM scripts expect the environment in .venv/)
+.venv/
+venv/
+env/
+ENV/
+
+# Julia environment created by juliacall
+.CondaPkg/
+.julia/
+
+# Editors and operating systems
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Solver licenses and credentials (a Gurobi license file contains secrets)
+*.lic
+gurobi.env
+
+# Training-label caches written by Pseudo_DFL_main.py (large, regenerable)
+data_cache/
+data_cache_scale*/
+*.pkl
+
+# Default output folders of main.py, SDDiP_main.py and Pseudo_DFL_main.py, and
+# runs/, used by the single-run examples in the READMEs
+Experiment_*/
+runs/
+
+# Throwaway outputs of the cluster smoke tests and local exact-DP reruns
+experiments/smoke_snellius/
+exact_dp/results/
+
+# SDDiP cut files written next to sddip_solution.json (large, not needed to
+# evaluate the policy)
+experiments/**/cuts.json
+
+# SDDP.jl training log, appended in the working directory by every SDDiP run
+SDDP.log
+
+# SLURM logs (the folder itself is kept because sbatch writes into it)
+logs/*
+!logs/.gitkeep
+
+# Backups written by inject_mpc_baseline.py
+*.bak
+
+# Data files
+*.csv
+*.h5
