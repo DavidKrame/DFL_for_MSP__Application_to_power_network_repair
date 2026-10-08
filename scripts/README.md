@@ -4,7 +4,7 @@ Helper scripts of the repository. Run all of them from the repository root.
 
 - [`quick_check.sh`](quick_check.sh) checks a checkout end to end on a laptop in about a minute.
 - [`sensitivity_plot.py`](sensitivity_plot.py) builds the table and plots of the repair-cost sensitivity sweep.
-- [`make_readme_figures.py`](make_readme_figures.py) draws `docs/images/toy_network.png`, the 5-bus network figure of the top-level README, from the data in `network_data.py`.
+- [`make_readme_figures.py`](make_readme_figures.py) draws the two figures of the top-level README that the paper does not have: `docs/images/toy_network.png`, the 5-bus network from the data in `network_data.py`, and `docs/images/mean_cost_by_method.png`, the mean test cost of each method in the six reported configurations, read from `experiments/`.
 - [`slurm/`](slurm) holds the SLURM job scripts that produced the results stored in [`experiments/`](../experiments/README.md), the environment setup, and a suite of [smoke tests](slurm/smoke/README.md). The experiments ran on the Snellius cluster, partition `rome` (AMD EPYC 7H12 nodes).
 
 Installation and the Python entry points are described in the [top-level README](../README.md), the stored results in [`experiments/README.md`](../experiments/README.md), and the scripts that recompute the reported numbers and figures in [`paper/README.md`](../paper/README.md).
@@ -51,7 +51,7 @@ Names used in the code, the scripts and the result files:
 |---|---|---|
 | `quick_check.sh` | `bash scripts/quick_check.sh` | installation check, unit tests, short runs, and a check of the reported numbers and figures (laptop) |
 | `sensitivity_plot.py` | `python scripts/sensitivity_plot.py` | $`(\bar c_{\mathrm{AR}} - \bar c_{\mathrm{DFL}})/\bar c_{\mathrm{DFL}}`$ against the repair-cost scale $`s`$, from the sensitivity sweep |
-| `make_readme_figures.py` | `python scripts/make_readme_figures.py` | redraws `docs/images/toy_network.png`, the 5-bus network figure of the top-level README, or writes it to the folder given with `--out` |
+| `make_readme_figures.py` | `python scripts/make_readme_figures.py` | redraws `docs/images/toy_network.png` and `docs/images/mean_cost_by_method.png`, the two figures of the top-level README that the paper does not have, or writes them to the folder given with `--out` |
 | `slurm/install_env.sh` | `sbatch` | creates `.venv` with the Python packages, gurobipy, Julia, SDDP.jl and Gurobi.jl |
 | `slurm/install_deps.sh` | `bash`, on a login node | adds missing packages to an existing `.venv` |
 | `slurm/smoke/` | `bash scripts/slurm/smoke/submit_all.sh`, or `sbatch` per job | nine short jobs that check the setup and both solvers |

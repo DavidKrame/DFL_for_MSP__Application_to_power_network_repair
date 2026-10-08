@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the README figures that are not plots of experiment results.
+"""Draw the README figures that the paper does not have.
 
 Run from anywhere:
 
@@ -7,7 +7,9 @@ Run from anywhere:
 
 Figures are written to ``docs/images/``, or to the folder given with ``--out``:
 
-    toy_network.png   the synthetic 5-bus network (``toy``) with its data
+    toy_network.png          the synthetic 5-bus network (``toy``) with its data
+    mean_cost_by_method.png  mean test cost of each method in the six reported
+                             configurations, read from ``experiments/``
 
 The generators, loads and lines of the network, with their capacities, costs,
 demands, susceptances and flow limits, are read from
@@ -16,6 +18,7 @@ which each generator or load is drawn are set here.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -173,6 +176,64 @@ def draw_toy_network(path: Path) -> None:
     print(f"  saved {_shown(path)}")
 
 
+# Method colours of the paper figures
+METHODS = [("NoRepair", "NoRepair", "#E06555"), ("AlwaysRepair", "AlwaysRepair", "#F2A03D"),
+           ("NearSightedMPC", "Near-sighted MPC", "#3BA287"), ("SAA", "SAA", "#9B7FB8"),
+           ("Pseudo_DFL", "DFL", "#5B8FC2")]
+LANES = [("toy", "5-bus\n$s = 100$"), ("case14", "case14\n$s = 45$"), ("case14_scale55", "case14\n$s = 55$")]
+VARIANTS = [("paper_unbudgeted", "Without a budget"), ("paper_budget0.3", "With a budget ($\\varphi = 0.3$)")]
+
+
+def _lane_costs(variant: str, lane: str) -> dict:
+    """Mean test cost of each method at the best training size of the DFL sweep.
+
+    The best size is the one with the lowest five-seed DFL mean, as in the
+    results tables. SAA comes from its own folder, the other methods from the
+    aggregated ``evaluation.json`` of that size.
+    """
+    exp = REPO / "experiments" / variant
+    sizes = []
+    for f in (exp / "dfl_scaling_multiseed" / lane).glob("dfl_train*/evaluation.json"):
+        sizes.append((json.loads(f.read_text())["Pseudo_DFL"]["mean_cost"], f))
+    best = json.loads(min(sizes)[1].read_text())
+    costs = {key: best[key]["mean_cost"] for key, _, _ in METHODS if key != "SAA"}
+    saa = json.loads((exp / lane / "SAA" / "solution.json").read_text())
+    costs["SAA"] = saa["out_of_sample_evaluation"]["mean_cost"]
+    return costs
+
+
+def draw_cost_bars(path: Path) -> None:
+    """Grouped bars of the mean test cost, one panel per variant."""
+    fig, axes = plt.subplots(1, 2, figsize=(14, 5.6), sharey=True)
+    width = 0.16
+    for ax, (variant, title) in zip(axes, VARIANTS):
+        for g, (lane, _) in enumerate(LANES):
+            costs = _lane_costs(variant, lane)
+            for m, (key, label, color) in enumerate(METHODS):
+                x = g + (m - 2) * width
+                ax.bar(x, costs[key] / 1e6, width, color=color, edgecolor="black",
+                       lw=1.6 if key == "Pseudo_DFL" else 0.6, label=label if g == 0 else None)
+            change = (costs["Pseudo_DFL"] - costs["AlwaysRepair"]) / costs["AlwaysRepair"] * 100
+            ax.text(g + 2 * width, costs["Pseudo_DFL"] / 1e6 + 0.06, f"{change:+.1f}%",
+                    ha="center", va="bottom", fontsize=TICK - 2, fontweight="bold")
+        ax.set_xticks(range(len(LANES)))
+        ax.set_xticklabels([lab for _, lab in LANES], fontsize=TICK)
+        ax.set_title(title, fontsize=LABEL)
+        ax.tick_params(axis="y", labelsize=TICK)
+        ax.grid(True, axis="y", alpha=0.35)
+        ax.set_axisbelow(True)
+    axes[0].set_ylabel("Mean cost per test scenario (million USD)", fontsize=LABEL - 2)
+    axes[0].set_ylim(0, 4.2)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=len(METHODS), fontsize=TICK, frameon=False,
+               bbox_to_anchor=(0.5, -0.04))
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=150, bbox_inches="tight", pad_inches=0.15, facecolor="white")
+    plt.close(fig)
+    print(f"  saved {_shown(path)}")
+
+
 def _shown(path: Path) -> Path:
     """Return ``path`` relative to the repository when it lies inside it."""
     return path.relative_to(REPO) if path.is_relative_to(REPO) else path
@@ -185,6 +246,7 @@ def main() -> None:
     out = parser.parse_args().out.resolve()
     print("Writing figures to", _shown(out))
     draw_toy_network(out / "toy_network.png")
+    draw_cost_bars(out / "mean_cost_by_method.png")
 
 
 if __name__ == "__main__":

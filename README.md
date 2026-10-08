@@ -14,11 +14,55 @@ This repository holds the code, the stored results and the SLURM job scripts of 
 </p>
 <p align="center"><em>Mean cost of DFL on the IEEE 14-bus network (case14) at repair-cost scale s = 55 with a per-stage repair budget (budget fraction 0.3), over 500 test scenarios, against the number of training scenarios. The band spans ± one standard deviation across five initializations. At 80,000 training scenarios DFL costs 23.7% less than AlwaysRepair.</em></p>
 
-**Contents:** [Key results](#key-results) · [Quick start](#quick-start) · [The problem](#the-problem) · [The DFL policy](#the-dfl-policy) · [Baselines and the exact optimum](#baselines-and-the-exact-optimum) · [Results](#results) · [Installation](#installation) · [Reproducing the experiments](#reproducing-the-experiments) · [Applying the code to another network](#applying-the-code-to-another-network) · [Repository guide](#repository-guide) · [Computational details](#computational-details) · [Tests](#tests) · [License](#license) · [Citation](#citation)
+**Contents:** [The framework in brief](#the-framework-in-brief) · [Key results](#key-results) · [Quick start](#quick-start) · [The problem](#the-problem) · [The DFL policy](#the-dfl-policy) · [Baselines and the exact optimum](#baselines-and-the-exact-optimum) · [Results](#results) · [Installation](#installation) · [Reproducing the experiments](#reproducing-the-experiments) · [Applying the code to another network](#applying-the-code-to-another-network) · [Repository guide](#repository-guide) · [Computational details](#computational-details) · [Tests](#tests) · [License](#license) · [Citation](#citation)
+
+## The framework in brief
+
+A multistage stochastic program takes a decision $`\delta_t \in \mathcal{D}_t(x_t, \xi_t)`$ at each stage $`t = 1, \dots, T`$ after the random outcome $`\xi_t`$ is revealed, and moves to the state $`x_{t+1} = f_t(x_t, \delta_t, \xi_t)`$. Its value functions satisfy
+
+```math
+\mathcal{V}_t(x_t) = \mathbb{E}_{\xi_t}\Big[\min_{\delta_t \in \mathcal{D}_t(x_t, \xi_t)} \big\{ c_t(x_t, \delta_t, \xi_t) + \mathcal{V}_{t+1}\big(f_t(x_t, \delta_t, \xi_t)\big) \big\}\Big],
+\qquad \mathcal{V}_{T+1} \equiv 0 .
+```
+
+The framework assumes that the decision splits as $`\delta_t = (\delta_t^0, u_t)`$, where only the sub-decision $`u_t`$ drives the state and enters the cost linearly:
+
+```math
+f_t(x_t, \delta_t, \xi_t) = f_t(x_t, u_t, \xi_t),
+\qquad
+c_t(x_t, \delta_t, \xi_t) = c_t^0(x_t, \delta_t^0, \xi_t) + \beta_t^\top u_t .
+```
+
+The continuation value is then replaced by a function linear in $`u_t`$, whose coefficients a neural network $`\pi_{\boldsymbol{\psi}}`$ predicts from the observed state, and each stage solves a surrogate problem in $`u_t`$, followed by the inner problem $`Q_t^0`$ for $`\delta_t^0`$:
+
+```math
+\begin{aligned}
+\mathcal{V}_{t+1}\big(f_t(x_t, u_t, \xi_t)\big) &\approx h_t(x_t, \xi_t) - \boldsymbol{\mu}_t^\top u_t,
+\qquad \boldsymbol{\mu}_t = \pi_{\boldsymbol{\psi}}(x_t, \xi_t),\\[4pt]
+u_t &\in \arg\min_{u \in \mathcal{U}_t(x_t, \xi_t)} \big\{ Q_t^0(x_t, u, \xi_t) + (\beta_t - \boldsymbol{\mu}_t)^\top u \big\}.
+\end{aligned}
+```
+
+The network is trained offline on perfect-information decisions $`u_s^{*,t}`$, the solutions of single-scenario MIPs, with the Fenchel-Young loss of the perturbed optimizer, whose gradient is the smoothed decision minus the label:
+
+```math
+\min_{\boldsymbol{\psi}}\ \sum_{s,t} L_\varepsilon\big(\pi_{\boldsymbol{\psi}}(x_s^t, \xi_s^t);\ u_s^{*,t}\big),
+\qquad
+\nabla_{\boldsymbol{\mu}} L_\varepsilon(\boldsymbol{\mu};\, u^*) = \hat u_\varepsilon(\boldsymbol{\mu}) - u^*,
+\qquad
+\hat u_\varepsilon(\boldsymbol{\mu}) = \mathbb{E}_{Z}\Big[\arg\max_{u \in \mathcal{Y}}\ (\boldsymbol{\mu} + \varepsilon Z)^\top u\Big].
+```
+
+In the application, $`x_t`$ is the availability of the generators and lines, $`\xi_t`$ the failures of the stage, $`u_t`$ the repair vector $`r^t`$ with cost $`\beta^\top r^t`$, and $`\delta_t^0`$ the DC-OPF dispatch with cost $`Q^0(a^t)`$. [The problem](#the-problem) and [The DFL policy](#the-dfl-policy) give the details.
 
 ## Key results
 
 Three configurations are reported, each with and without the budget: the 5-bus network at repair-cost scale $`s = 100`$, and case14 at $`s = 45`$ and $`s = 55`$. The scale $`s`$ multiplies every repair cost, and the budget caps the repair spend of each stage at the fraction $`\varphi = 0.3`$ of the cost of repairing every component. Costs are means over 500 common test scenarios.
+
+<p align="center">
+  <img src="docs/images/mean_cost_by_method.png" width="90%" alt="Mean cost per test scenario of NoRepair, AlwaysRepair, Near-sighted MPC, SAA and DFL in the six configurations, without and with a budget; the percentage above each DFL bar is its cost relative to AlwaysRepair">
+</p>
+<p align="center"><em>Mean cost per test scenario over the 500 common test scenarios, with DFL at the best training size of its sweep (five-seed mean). The percentage above each DFL bar is its cost relative to AlwaysRepair. SDDiP is not shown, because its mean comes from its own simulations, not from the common test set (<a href="#saa-and-sddip-within-the-time-limit">SAA and SDDiP within the time limit</a>).</em></p>
 
 - Under the binding budget, [DFL has the lowest mean cost of the policies scored on the common test set](#mean-cost-with-a-budget) in all three configurations, at 21.6% (5-bus), 21.7% (case14, $`s = 45`$) and 23.7% (case14, $`s = 55`$) below AlwaysRepair.
 - [Without a budget](#mean-cost-without-a-budget), the outcome depends on the cost regime. DFL is the cheapest of these policies on the 5-bus network (6.8% below AlwaysRepair). On case14, Near-sighted MPC is cheapest, and DFL costs 7.6% more than AlwaysRepair at $`s = 45`$ and 2.8% less at $`s = 55`$, two scales near the crossing point of the [repair-cost sweep](#repair-cost-sensitivity).
@@ -881,13 +925,13 @@ The parameters of this page are documented constants in [`config.py`](config.py)
 │   ├── sensitivity/             repair-cost sensitivity sweep
 │   └── exact_dp_toy/            exact DP solutions of the 5-bus network
 ├── figures/                     the figures, as drawn by paper/make_paper_figures.py
-├── docs/images/                 README figures that are not result plots (toy_network.png)
+├── docs/images/                 README figures that the paper does not have (toy_network.png, mean_cost_by_method.png)
 ├── paper/                       reproduce_paper_numbers.py, make_paper_figures.py
 ├── exact_dp/                    exact DP of the 5-bus network (exact_dp_toy.py, run_local.sh)
 ├── scripts/
 │   ├── quick_check.sh           end-to-end check of a checkout
 │   ├── sensitivity_plot.py      sensitivity table and diagnostic plots
-│   ├── make_readme_figures.py   draws docs/images/toy_network.png from network_data.py
+│   ├── make_readme_figures.py   draws the two README figures in docs/images/
 │   └── slurm/                   cluster jobs: unbudgeted/, budgeted/, sensitivity/, smoke/,
 │                                exact_dp.sh, install_env.sh, install_deps.sh
 ├── tests/                       pytest suite (118 tests)
