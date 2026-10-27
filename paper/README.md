@@ -50,9 +50,9 @@ In the output and in the result files, `paper_unbudgeted` and `paper_budget0.3` 
 | SDDiP | Lower bound, number of iterations, mean cost of the final policy over its 500 post-training simulations, and the estimated gap $`(\bar c_{\mathrm{SDDiP}} - \mathrm{LB})/\bar c_{\mathrm{SDDiP}}`$. On toy, also how far the policy mean and the bound lie from the exact optimum | 28 |
 | Exact dynamic programming on the 5-bus network | The two exact optima, and how far the DFL mean lies above them | 4 |
 | Sample-complexity statements | For toy without budget, the first training size at which DFL beats AlwaysRepair, and the largest across-seed standard deviation for $`n_{\text{train}} \ge 15{,}000`$ (printed only). For case14 at $`s = 55`$ without budget, the lowest DFL mean and its training size | 3 |
-| Repair-cost sensitivity | The table of $`(\bar c_{\mathrm{AR}} - \bar c_{\mathrm{DFL}})/\bar c_{\mathrm{DFL}}`$ by scale and network, and the case14 zero crossing interpolated between $`s = 50`$ and $`s = 70`$ $`(s = 55.2)`$ | printed only |
+| Repair-cost sensitivity | The table of $`(\bar c_{\mathrm{AR}} - \bar c_{\mathrm{DFL}})/\bar c_{\mathrm{DFL}}`$ by scale and network, and the case14 zero crossing interpolated between $`s = 50`$ and $`s = 70`$ $`(s = 55.8)`$ | printed only |
 
-The ratios in these checks compare mean costs $`\bar c`$, each the mean total cost over the 500 test scenarios. For SDDiP the mean runs over its 500 simulations instead. For DFL it is the five-seed mean, except in the sensitivity table, which uses the single model with initialization seed 42. AR stands for AlwaysRepair and $`\mathrm{LB}`$ for the SDDiP lower bound. [From files to reported numbers](../experiments/README.md#from-files-to-reported-numbers) in `experiments/README.md` gives the formulas of the five ratios, all reported in percent: DFL vs AR, sensitivity, above and below the exact optimum, and the estimated gap.
+The ratios in these checks compare mean costs $`\bar c`$, each the mean total cost over the 500 test scenarios, which the paper calls evaluation paths. For SDDiP the mean runs over its 500 simulations instead. For DFL it is the five-seed mean, except in the sensitivity table, which uses the single model with initialization seed 42. AR stands for AlwaysRepair and $`\mathrm{LB}`$ for the SDDiP lower bound. [From files to reported numbers](../experiments/README.md#from-files-to-reported-numbers) in `experiments/README.md` gives the formulas of the five ratios, all reported in percent: DFL vs AR, sensitivity, above and below the exact optimum, and the estimated gap.
 
 Notes on the quantities:
 
@@ -91,11 +91,11 @@ Failure model constants
 Mean out-of-sample cost by method (unbudgeted and budgeted tables)
   -- paper_unbudgeted / toy (n_train = 15,000)
   [ok] NoRepair                                                 paper=    2,511,488  recomputed=    2,511,488
-  [ok] AlwaysRepair                                             paper=    1,509,596  recomputed=    1,509,596
+  [ok] AlwaysRepair                                             paper=    1,506,639  recomputed=    1,506,639
   [ok] Near-sighted MPC                                         paper=    1,445,096  recomputed=    1,445,096
   [ok] SAA (nearest-child rollout)                              paper=    2,028,014  recomputed=    2,028,014
   [ok] DFL (five-seed mean)                                     paper=    1,406,419  recomputed=    1,406,419
-  [ok] Savings vs AlwaysRepair, % of AR cost                    paper=         +6.8  recomputed=         +6.8
+  [ok] Savings vs AlwaysRepair, % of AR cost                    paper=         +6.7  recomputed=         +6.7
   [ok] reported n_train is the best size of the sweep           paper=       15,000  recomputed=       15,000
 ...
 ====================================================================================================
@@ -120,7 +120,7 @@ Exact dynamic programming on the 5-bus network
   [ok] paper_unbudgeted: DFL mean above the exact optimum, %    paper=          1.7  recomputed=          1.7
   [ok] paper_budget0.3: DFL mean above the exact optimum, %     paper=          1.8  recomputed=          1.8
 ...
-  case14 zero crossing by linear interpolation between s = 50 and s = 70: s = 55.2
+  case14 zero crossing by linear interpolation between s = 50 and s = 70: s = 55.8
 ====================================================================================================
 All checks agree with the paper.
 ```

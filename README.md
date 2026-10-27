@@ -12,7 +12,7 @@ This repository holds the code, the stored results and the SLURM job scripts of 
 <p align="center">
   <img src="figures/paper/case14_scale55/convergence_multiseed_budget.png" width="55%" alt="Mean cost of the DFL policy on the IEEE 14-bus network with a repair budget against the number of training scenarios: below NoRepair and Near-sighted MPC from 25 scenarios on, and below AlwaysRepair from 1,000 scenarios on">
 </p>
-<p align="center"><em>Mean cost of DFL on the IEEE 14-bus network (case14) at repair-cost scale s = 55 with a per-stage repair budget (budget fraction 0.3), over 500 test scenarios, against the number of training scenarios. The band spans ± one standard deviation across five initializations. At 80,000 training scenarios DFL costs 23.7% less than AlwaysRepair.</em></p>
+<p align="center"><em>Mean cost of DFL on the IEEE 14-bus network (case14) at repair-cost scale s = 55 with a per-stage repair budget (budget fraction 0.3), over 500 test scenarios, against the number of training scenarios. The band spans ± one standard deviation across five initializations. At 80,000 training scenarios DFL costs 23.3% less than AlwaysRepair.</em></p>
 
 **Contents:** [The framework in brief](#the-framework-in-brief) · [Key results](#key-results) · [Quick start](#quick-start) · [The problem](#the-problem) · [The DFL policy](#the-dfl-policy) · [Baselines and the exact optimum](#baselines-and-the-exact-optimum) · [Results](#results) · [Installation](#installation) · [Reproducing the experiments](#reproducing-the-experiments) · [Applying the code to another network](#applying-the-code-to-another-network) · [Repository guide](#repository-guide) · [Computational details](#computational-details) · [Tests](#tests) · [License](#license) · [Citation](#citation)
 
@@ -64,8 +64,8 @@ Three configurations are reported, each with and without the budget: the 5-bus n
 </p>
 <p align="center"><em>Mean total cost with the repair budget (budget fraction 0.3) on the 5-bus network at s = 100 and on case14 at s = 55. The first five bars are scored on the 500 common test scenarios, DFL at the best training size of its sweep, and the whiskers span ± one across-scenario standard deviation (for DFL, averaged over its five initializations). The dash-dot line on the 5-bus network is the exact optimum from dynamic programming (<a href="#distance-to-the-exact-optimum">Distance to the exact optimum</a>).</em></p>
 
-- Under the binding budget, [DFL has the lowest mean cost of the policies scored on the common test set](#mean-cost-with-a-budget) in all three configurations, at 21.6% (5-bus), 21.7% (case14, $`s = 45`$) and 23.7% (case14, $`s = 55`$) below AlwaysRepair.
-- [Without a budget](#mean-cost-without-a-budget), the outcome depends on the cost regime. DFL is the cheapest of these policies on the 5-bus network (6.8% below AlwaysRepair). On case14, Near-sighted MPC is cheapest, and DFL costs 7.6% more than AlwaysRepair at $`s = 45`$ and 2.8% less at $`s = 55`$, two scales near the crossing point of the [repair-cost sweep](#repair-cost-sensitivity).
+- Under the binding budget, [DFL has the lowest mean cost of the policies scored on the common test set](#mean-cost-with-a-budget) in all three configurations, at 21.5% (5-bus), 21.3% (case14, $`s = 45`$) and 23.3% (case14, $`s = 55`$) below AlwaysRepair.
+- [Without a budget](#mean-cost-without-a-budget), the outcome depends on the cost regime. DFL is the cheapest of these policies on the 5-bus network (6.7% below AlwaysRepair). On case14, Near-sighted MPC is cheapest, and DFL costs 8.3% more than AlwaysRepair at $`s = 45`$ and 2.1% less at $`s = 55`$, two scales near the crossing point of the [repair-cost sweep](#repair-cost-sensitivity).
 - On the 5-bus network, where dynamic programming gives the [exact optimum](#distance-to-the-exact-optimum), the DFL mean is 1.7% (unbudgeted) and 1.8% (budgeted) above it.
 - A 14-stage test scenario takes DFL 30.0 ms on the 5-bus network and 35.2 ms on case14 ($`s = 45`$), [about as long as the trivial heuristics](#deployment-time), while Near-sighted MPC takes 196 and 2,707 times as long.
 - Training one of the 440 models of the training-size sweeps took at most 17.0 h without the budget and 62.8 h with it ([Run times](#run-times)).
@@ -377,7 +377,7 @@ DFL, NoRepair, AlwaysRepair, Near-sighted MPC and SAA are scored on the same 500
 |---|---|---|---|
 | DFL | learned net benefit: threshold rule, or knapsack under the budget | [`Pseudo_DFL_main.py`](Pseudo_DFL_main.py) | `Pseudo_DFL` |
 | NoRepair | never repairs | the DFL run | `NoRepair` |
-| AlwaysRepair | repairs every failed component, cheapest first under the budget | the DFL run | `AlwaysRepair` |
+| AlwaysRepair | repairs every failed component except at the last stage, cheapest first under the budget | the DFL run | `AlwaysRepair` |
 | Near-sighted MPC | certainty-equivalent lookahead over a window of three stages | `--with-mpc` in the DFL run | `NearSightedMPC` |
 | SAA | extensive-form MILP on a sampled scenario tree, nearest-child rollout | [`main.py`](main.py) | `SAA/` |
 | SDDiP | SDDP.jl with Lagrangian cuts | [`SDDiP_main.py`](SDDiP_main.py) | `SDDiP/` |
@@ -385,7 +385,7 @@ DFL, NoRepair, AlwaysRepair, Near-sighted MPC and SAA are scored on the same 500
 
 ### NoRepair and AlwaysRepair
 
-NoRepair never repairs. AlwaysRepair repairs every failed component at every stage, including the last stage, where a repair is paid for but cannot take effect within the horizon. With a budget, AlwaysRepair repairs the cheapest failed components first, as many as the budget allows.
+NoRepair never repairs. AlwaysRepair repairs every failed component at every stage except the last, where a repair could not complete within the horizon. With a budget, AlwaysRepair repairs the cheapest failed components first, as many as the budget allows, also except at the last stage.
 
 ### Near-sighted MPC
 
@@ -489,19 +489,19 @@ DFL vs AR, the saving relative to AlwaysRepair, is positive when DFL is cheaper.
 
 | Network | $`s`$ | n_train | NoRepair | AlwaysRepair | Near-sighted MPC | SAA | DFL | DFL across-seed std | DFL vs AR |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| 5-bus | 100 | 15,000 | 2,511,488 | 1,509,596 | 1,445,096 | 2,028,014 | **1,406,419** | 3,167 | +6.8% |
-| case14 | 45 | 30,000 | 3,614,867 | 2,112,099 | **1,949,190** | 3,193,445 | 2,271,956 | 87,283 | -7.6% |
-| case14 | 55 | 100,000 | 3,614,867 | 2,385,736 | **2,107,215** | 3,255,115 | 2,318,269 | 61,313 | +2.8% |
+| 5-bus | 100 | 15,000 | 2,511,488 | 1,506,639 | 1,445,096 | 2,028,014 | **1,406,419** | 3,167 | +6.7% |
+| case14 | 45 | 30,000 | 3,614,867 | 2,098,438 | **1,949,190** | 3,193,445 | 2,271,956 | 87,283 | -8.3% |
+| case14 | 55 | 100,000 | 3,614,867 | 2,369,039 | **2,107,215** | 3,255,115 | 2,318,269 | 61,313 | +2.1% |
 
 ### Mean cost with a budget
 
 | Network | $`s`$ | n_train | NoRepair | AlwaysRepair | Near-sighted MPC | SAA | DFL | DFL across-seed std | DFL vs AR |
 |---|--:|--:|--:|--:|--:|--:|--:|--:|--:|
-| 5-bus | 100 | 60,000 | 2,511,488 | 1,940,415 | 2,403,624 | 2,069,534 | **1,520,472** | 2,011 | +21.6% |
-| case14 | 45 | 15,000 | 3,614,867 | 2,856,136 | 2,600,141 | 3,240,817 | **2,235,973** | 68,890 | +21.7% |
-| case14 | 55 | 80,000 | 3,614,867 | 3,069,309 | 3,390,760 | 3,214,677 | **2,340,615** | 49,014 | +23.7% |
+| 5-bus | 100 | 60,000 | 2,511,488 | 1,937,457 | 2,403,624 | 2,069,534 | **1,520,472** | 2,011 | +21.5% |
+| case14 | 45 | 15,000 | 3,614,867 | 2,842,476 | 2,600,141 | 3,240,817 | **2,235,973** | 68,890 | +21.3% |
+| case14 | 55 | 80,000 | 3,614,867 | 3,052,613 | 3,390,760 | 3,214,677 | **2,340,615** | 49,014 | +23.3% |
 
-The budget is $`\varphi = 0.3`$. Under the budget, AlwaysRepair repairs as many failed components as the budget allows, cheapest first, and Near-sighted MPC skips schedules that exceed the budget. NoRepair spends nothing on repairs, so its cost is the same in both variants and at both case14 scales. The budgeted case14 sweep at $`s = 55`$ ends at 80,000 training scenarios (see [What did not finish](#what-did-not-finish)). SDDiP is not in these tables because it was not evaluated on the common test set (see [SAA and SDDiP within the time limit](#saa-and-sddip-within-the-time-limit)).
+The budget is $`\varphi = 0.3`$. Under the budget, AlwaysRepair repairs as many failed components as the budget allows, cheapest first (none at the last stage), and Near-sighted MPC skips schedules that exceed the budget. NoRepair spends nothing on repairs, so its cost is the same in both variants and at both case14 scales. The budgeted case14 sweep at $`s = 55`$ ends at 80,000 training scenarios (see [What did not finish](#what-did-not-finish)). SDDiP is not in these tables because it was not evaluated on the common test set (see [SAA and SDDiP within the time limit](#saa-and-sddip-within-the-time-limit)).
 
 ### Where the savings come from
 
@@ -509,12 +509,12 @@ Mean repair spend and load shed per test scenario:
 
 | Configuration | DFL repair spend (USD) | DFL load shed (MWh) | AR repair spend (USD) | AR load shed (MWh) |
 |---|--:|--:|--:|--:|
-| 5-bus, unbudgeted | 381,209 | 988 | 740,842 | 726 |
-| case14 ($`s = 45`$), unbudgeted | 540,798 | 1,714 | 1,231,367 | 857 |
-| case14 ($`s = 55`$), unbudgeted | 517,535 | 1,784 | 1,505,004 | 857 |
-| 5-bus, budgeted | 342,405 | 1,144 | 556,445 | 1,356 |
-| case14 ($`s = 45`$), budgeted | 379,670 | 1,840 | 959,277 | 1,878 |
-| case14 ($`s = 55`$), budgeted | 434,735 | 1,889 | 1,172,450 | 1,878 |
+| 5-bus, unbudgeted | 381,209 | 988 | 737,884 | 726 |
+| case14 ($`s = 45`$), unbudgeted | 540,798 | 1,714 | 1,217,706 | 857 |
+| case14 ($`s = 55`$), unbudgeted | 517,535 | 1,784 | 1,488,307 | 857 |
+| 5-bus, budgeted | 342,405 | 1,144 | 553,488 | 1,356 |
+| case14 ($`s = 45`$), budgeted | 379,670 | 1,840 | 945,617 | 1,878 |
+| case14 ($`s = 55`$), budgeted | 434,735 | 1,889 | 1,155,754 | 1,878 |
 
 Without a budget, DFL spends a third to a half of what AlwaysRepair spends on repairs and accepts more load shedding. Under the budget, it spends less on repairs in every configuration and sheds about as much load or less.
 
@@ -525,12 +525,12 @@ For DFL, the table gives the per-seed standard deviation over the 500 test scena
 
 | Configuration | DFL | AlwaysRepair | Near-sighted MPC |
 |---|--:|--:|--:|
-| 5-bus, unbudgeted | 147,204 | 182,053 | 147,566 |
-| case14 ($`s = 45`$), unbudgeted | 258,241 | 259,701 | 242,020 |
-| case14 ($`s = 55`$), unbudgeted | 228,029 | 281,520 | 253,062 |
-| 5-bus, budgeted | 153,482 | 216,843 | 311,935 |
-| case14 ($`s = 45`$), budgeted | 247,306 | 298,915 | 568,840 |
-| case14 ($`s = 55`$), budgeted | 215,595 | 307,964 | 438,293 |
+| 5-bus, unbudgeted | 147,204 | 181,324 | 147,566 |
+| case14 ($`s = 45`$), unbudgeted | 258,241 | 259,749 | 242,020 |
+| case14 ($`s = 55`$), unbudgeted | 228,029 | 281,378 | 253,062 |
+| 5-bus, budgeted | 153,482 | 216,198 | 311,935 |
+| case14 ($`s = 45`$), budgeted | 247,306 | 298,073 | 568,840 |
+| case14 ($`s = 55`$), budgeted | 215,595 | 306,815 | 438,293 |
 
 </details>
 
@@ -574,7 +574,7 @@ The repair-cost scale $`s`$ decides whether repair selection matters. For each $
 
 Here $`\bar c_{\mathrm{DFL}}`$ is the cost of this single model. Unlike the DFL vs AR column of the cost tables, which divides by the AlwaysRepair cost, this ratio divides by the DFL cost.
 
-DFL is ahead of AlwaysRepair at every scale on the 5-bus network, by +0.36% to +8.28%. On case14, the difference changes sign between $`s = 50`$ (-7.18%) and $`s = 70`$ (+20.22%), and linear interpolation between these two points puts the crossing at $`s = 55.2`$. The scales of the main experiments come from this sweep: $`s = 100`$ on the 5-bus network, and $`s = 45`$ and $`s = 55`$ on case14, near the crossing. With the five-seed models of the sweeps, AlwaysRepair is cheaper than DFL at $`s = 45`$ and DFL is slightly cheaper at $`s = 55`$ (see the cost tables). The values of both networks at all 12 scales are in [experiments/sensitivity/sensitivity_curve.txt](experiments/sensitivity/sensitivity_curve.txt).
+DFL is ahead of AlwaysRepair at every scale on the 5-bus network, by +0.36% to +8.02%. On case14, the difference changes sign between $`s = 50`$ (-7.80%) and $`s = 70`$ (+19.31%), and linear interpolation between these two points puts the crossing at $`s = 55.8`$. The scales of the main experiments come from this sweep: $`s = 100`$ on the 5-bus network, and $`s = 45`$ and $`s = 55`$ on case14, near the crossing. With the five-seed models of the sweeps, AlwaysRepair is cheaper than DFL at $`s = 45`$ and DFL is slightly cheaper at $`s = 55`$ (see the cost tables). The values of both networks at all 12 scales are in [experiments/sensitivity/sensitivity_curve.txt](experiments/sensitivity/sensitivity_curve.txt).
 
 <p align="center">
   <img src="figures/sensitivity/cost_vs_scale_toy.png" width="48%" alt="(AR − DFL)/DFL against the repair-cost scale s on the 5-bus network, positive at every scale">

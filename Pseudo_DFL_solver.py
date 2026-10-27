@@ -4,8 +4,9 @@ Pseudo_DFL Solver Module
 Rolls out the trained DFL repair policy on fresh scenarios and evaluates the
 resulting total cost. Also provides three baselines for comparison:
 
-  - AlwaysRepair     : repair every failed component at every stage (under a
-                       repair budget, the cheapest affordable subset)
+  - AlwaysRepair     : repair every failed component at every stage except the
+                       last, where a repair could not complete within the horizon
+                       (under a repair budget, the cheapest affordable subset)
   - NoRepair         : never repair anything
   - Near-sighted MPC : certainty-equivalent lookahead over a short window,
                        replanned every stage (NearSightedMPCRollout; cached
@@ -285,11 +286,13 @@ class PseudoDFLRollout:
 # ---------------------------------------------------------------------------
 
 class AlwaysRepairRollout:
-    """Greedy baseline: repair every failed component at every stage.
+    """Greedy baseline: repair every failed component at every stage except the last.
 
-    Under a per-stage repair budget, repairing everything may be unaffordable, so
-    the baseline repairs as many failed components as the budget allows,
-    cheapest first. With no budget it repairs every failed component.
+    A repair ordered at stage t completes at stage t + tau, so a repair ordered
+    when that is past the horizon (the last stage, with tau = 1) cannot help and
+    is not ordered. Under a per-stage repair budget, repairing everything may be
+    unaffordable, so the baseline repairs as many failed components as the budget
+    allows, cheapest first. With no budget it repairs every failed component.
     """
 
     def __init__(self, network, params, lp_method=None):
@@ -347,7 +350,12 @@ class AlwaysRepairRollout:
         for t in range(T):
             avail_gen [t, :] = a_gen
             avail_line[t, :] = a_line
-            r_g, r_l = self._affordable_repairs(a_gen, a_line)
+            # No repair once it could not complete within the horizon: it
+            # would add its cost and change nothing.
+            if t + p.tau <= T - 1:
+                r_g, r_l = self._affordable_repairs(a_gen, a_line)
+            else:
+                r_g, r_l = np.zeros_like(a_gen), np.zeros_like(a_line)
             r_gen_hist.append(r_g.copy())
             r_line_hist.append(r_l.copy())
             rep_gen [t, :] = r_g

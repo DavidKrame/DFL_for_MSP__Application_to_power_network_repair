@@ -91,12 +91,12 @@ def main():
 
     section("Mean out-of-sample cost by method (unbudgeted and budgeted tables)")
     table = {
-        (UNB, "toy"): (2511488, 1509596, 1445096, 2028014, 1406419, 6.8),
-        (UNB, "case14"): (3614867, 2112099, 1949190, 3193445, 2271956, -7.6),
-        (UNB, "case14_scale55"): (3614867, 2385736, 2107215, 3255115, 2318269, 2.8),
-        (BUD, "toy"): (2511488, 1940415, 2403624, 2069534, 1520472, 21.6),
-        (BUD, "case14"): (3614867, 2856136, 2600141, 3240817, 2235973, 21.7),
-        (BUD, "case14_scale55"): (3614867, 3069309, 3390760, 3214677, 2340615, 23.7),
+        (UNB, "toy"): (2511488, 1506639, 1445096, 2028014, 1406419, 6.7),
+        (UNB, "case14"): (3614867, 2098438, 1949190, 3193445, 2271956, -8.3),
+        (UNB, "case14_scale55"): (3614867, 2369039, 2107215, 3255115, 2318269, 2.1),
+        (BUD, "toy"): (2511488, 1937457, 2403624, 2069534, 1520472, 21.5),
+        (BUD, "case14"): (3614867, 2842476, 2600141, 3240817, 2235973, 21.3),
+        (BUD, "case14_scale55"): (3614867, 3052613, 3390760, 3214677, 2340615, 23.3),
     }
     seed_std = {(BUD, "toy"): 2011, (BUD, "case14"): 68890, (BUD, "case14_scale55"): 49014}
     for (v, net), (nr, ar, mpc, saa, dfl, savings) in table.items():
@@ -118,11 +118,11 @@ def main():
 
     section("Cost decompositions quoted in the text")
     decomposition = {
-        (UNB, "case14"): (540798, 1714, 1231367, 857),
-        (UNB, "toy"): (381209, 988, 740842, 726),
-        (BUD, "case14"): (379670, 1840, 959277, 1878),
-        (BUD, "toy"): (342405, 1144, 556445, 1356),
-        (BUD, "case14_scale55"): (434735, 1889, 1172450, 1878),
+        (UNB, "case14"): (540798, 1714, 1217706, 857),
+        (UNB, "toy"): (381209, 988, 737884, 726),
+        (BUD, "case14"): (379670, 1840, 945617, 1878),
+        (BUD, "toy"): (342405, 1144, 553488, 1356),
+        (BUD, "case14_scale55"): (434735, 1889, 1155754, 1878),
     }
     for (v, net), (dfl_rep, dfl_shed, ar_rep, ar_shed) in decomposition.items():
         d = evaluation(v, net)
@@ -133,7 +133,7 @@ def main():
         check("AlwaysRepair load shed (MWh)", d["AlwaysRepair"]["mean_load_shed_mwh"], ar_shed)
 
     section("Across-scenario standard deviation (DFL: average over the five seeds)")
-    budget_std = {"toy": (153482, 216843), "case14": (247306, 298915), "case14_scale55": (215595, 307964)}
+    budget_std = {"toy": (153482, 216198), "case14": (247306, 298073), "case14_scale55": (215595, 306815)}
     for v in (UNB, BUD):
         for net in NETS:
             n = BEST[(v, net)]

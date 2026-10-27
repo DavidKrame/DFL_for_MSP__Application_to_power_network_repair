@@ -64,3 +64,6 @@ logs/*
 # Data files
 *.csv
 *.h5
+
+# Private notes
+TODO.md

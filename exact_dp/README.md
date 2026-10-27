@@ -272,7 +272,7 @@ The table puts the exact optimum next to the results of the other methods on the
 | Exact DP | 1,382,625 | 0.0% | 1,493,319 | 0.0% | exact expectation |
 | DFL, five-seed mean (n_train 15,000 / 60,000) | 1,406,419 | +1.7% | 1,520,472 | +1.8% | 500 test scenarios |
 | Near-sighted MPC ($`W = 3`$) | 1,445,096 | +4.5% | 2,403,624 | +61.0% | 500 test scenarios |
-| AlwaysRepair | 1,509,596 | +9.2% | 1,940,415 | +29.9% | 500 test scenarios |
+| AlwaysRepair | 1,506,639 | +9.0% | 1,937,457 | +29.7% | 500 test scenarios |
 | SDDiP, final policy | 1,584,476 | +14.6% | 1,651,543 | +10.6% | 500 SDDiP simulations |
 | SAA, nearest-child rollout | 2,028,014 | +46.7% | 2,069,534 | +38.6% | 500 test scenarios |
 | NoRepair | 2,511,488 | +81.6% | 2,511,488 | +68.2% | 500 test scenarios |

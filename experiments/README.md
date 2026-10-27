@@ -34,7 +34,7 @@ The files use the names of the code.
 | `paper_budget0.3` | Runs with a per-stage repair budget of $`\varphi = 0.3`$ times the cost of repairing every component. |
 | `Pseudo_DFL` | The DFL policy. |
 | `NearSightedMPC` | The Near-sighted MPC baseline, with a window of $`W = 3`$ stages. |
-| `AlwaysRepair`, `NoRepair` | The two trivial heuristics. Under the budget, AlwaysRepair repairs as many failed components as the budget allows, cheapest first. |
+| `AlwaysRepair`, `NoRepair` | The two trivial heuristics. AlwaysRepair repairs every failed component except at the last stage, where a repair could not complete within the horizon. Under the budget, it repairs as many failed components as the budget allows, cheapest first. |
 | `SAA`, `SDDiP` | The tree SAA and SDDiP baselines. |
 | $`s`$ | Repair-cost scale. Repair costs are proportional to capacity, with mean $`550\,s`$ per generator and $`350\,s`$ per line. |
 | lane | One network at one scale within one variant. Each variant has three lanes. |
@@ -290,16 +290,16 @@ A rerun of the script takes about 2 s and gives the same optimal values, policie
 ------------------------------
    0.1     +1.15%    -42.17%
    0.2     +1.17%    -46.10%
-   0.5     +1.19%    -40.20%
-   1.0     +0.36%    -41.49%
-   2.0     +0.99%    -42.51%
-   5.0     +1.19%    -40.99%
-  10.0     +1.29%    -39.42%
-  20.0     +1.55%    -31.65%
-  50.0     +1.15%     -7.18%
-  70.0     +2.64%    +20.22%
- 100.0     +3.59%    +45.13%
- 150.0     +8.28%    +78.33%
+   0.5     +1.19%    -40.21%
+   1.0     +0.36%    -41.51%
+   2.0     +0.98%    -42.55%
+   5.0     +1.17%    -41.08%
+  10.0     +1.26%    -39.58%
+  20.0     +1.48%    -31.95%
+  50.0     +1.01%     -7.80%
+  70.0     +2.48%    +19.31%
+ 100.0     +3.39%    +43.92%
+ 150.0     +8.02%    +76.70%
 ```
 
 `scripts/sensitivity_plot.py` writes this table and the three `sensitivity_curve*.png` from the `evaluation.json` files. It reads only folders named `scale_<float>`, such as `scale_10.0` (not `scale_10`). It writes all four files into the folder of `--out`, so an `--out` outside `experiments/sensitivity/` leaves the stored files untouched. The table it writes is identical to the stored one:
@@ -385,12 +385,12 @@ Mean costs at the reported sizes, over the 500 test scenarios:
 
 | Variant | Lane | N | NoRepair | AlwaysRepair | Near-sighted MPC | SAA | DFL | DFL vs AR |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| unbudgeted | `toy` | 15,000 | 2,511,488 | 1,509,596 | 1,445,096 | 2,028,014 | 1,406,419 | +6.8% |
-| unbudgeted | `case14` | 30,000 | 3,614,867 | 2,112,099 | 1,949,190 | 3,193,445 | 2,271,956 | -7.6% |
-| unbudgeted | `case14_scale55` | 100,000 | 3,614,867 | 2,385,736 | 2,107,215 | 3,255,115 | 2,318,269 | +2.8% |
-| budgeted | `toy` | 60,000 | 2,511,488 | 1,940,415 | 2,403,624 | 2,069,534 | 1,520,472 | +21.6% |
-| budgeted | `case14` | 15,000 | 3,614,867 | 2,856,136 | 2,600,141 | 3,240,817 | 2,235,973 | +21.7% |
-| budgeted | `case14_scale55` | 80,000 | 3,614,867 | 3,069,309 | 3,390,760 | 3,214,677 | 2,340,615 | +23.7% |
+| unbudgeted | `toy` | 15,000 | 2,511,488 | 1,506,639 | 1,445,096 | 2,028,014 | 1,406,419 | +6.7% |
+| unbudgeted | `case14` | 30,000 | 3,614,867 | 2,098,438 | 1,949,190 | 3,193,445 | 2,271,956 | -8.3% |
+| unbudgeted | `case14_scale55` | 100,000 | 3,614,867 | 2,369,039 | 2,107,215 | 3,255,115 | 2,318,269 | +2.1% |
+| budgeted | `toy` | 60,000 | 2,511,488 | 1,937,457 | 2,403,624 | 2,069,534 | 1,520,472 | +21.5% |
+| budgeted | `case14` | 15,000 | 3,614,867 | 2,842,476 | 2,600,141 | 3,240,817 | 2,235,973 | +21.3% |
+| budgeted | `case14_scale55` | 80,000 | 3,614,867 | 3,052,613 | 3,390,760 | 3,214,677 | 2,340,615 | +23.3% |
 
 Other percentages in the text, such as DFL relative to Near-sighted MPC, are ratios of the same means.
 
@@ -428,7 +428,7 @@ for method in ("NoRepair", "AlwaysRepair", "NearSightedMPC", "Pseudo_DFL"):
     print(f"{method:15s} {ev[method]['mean_cost']:12,.0f}")
 print(f"{'SAA':15s} {saa['mean_cost']:12,.0f}")
 ar, dfl = ev["AlwaysRepair"]["mean_cost"], ev["Pseudo_DFL"]["mean_cost"]
-print(f"DFL vs AR: {(ar - dfl) / ar:+.1%}")                      # +6.8%
+print(f"DFL vs AR: {(ar - dfl) / ar:+.1%}")                      # +6.7%
 ```
 
 All seed runs in one table, and the sample-complexity curve recomputed from it:
@@ -511,7 +511,7 @@ print(next(a for a in stage1 if a["availability_bits"] == [1, 1, 0, 1, 1, 1, 1])
 
 ev = load(EXP / "sensitivity/scale_100.0/case14/evaluation.json")
 ar, dfl = ev["AlwaysRepair"]["mean_cost"], ev["Pseudo_DFL"]["mean_cost"]
-print(f"{(ar - dfl) / dfl:+.2%}")                         # +45.13%, as in sensitivity_curve.txt
+print(f"{(ar - dfl) / dfl:+.2%}")                         # +43.92%, as in sensitivity_curve.txt
 ```
 
 A stored model can also be checked against its stored costs. Re-evaluating it on the test set reproduces the per-scenario costs of `Pseudo_DFL`, `AlwaysRepair` and `NoRepair` exactly, in about 30 s on a laptop:
