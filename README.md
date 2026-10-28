@@ -64,12 +64,7 @@ Three configurations are reported, each with and without the budget: the 5-bus n
 </p>
 <p align="center"><em>Mean total cost with the repair budget (budget fraction 0.3) on the 5-bus network at s = 100 and on case14 at s = 55. The first five bars are scored on the 500 common test scenarios, DFL at the best training size of its sweep, and the whiskers span ± one across-scenario standard deviation (for DFL, averaged over its five initializations). The dash-dot line on the 5-bus network is the exact optimum from dynamic programming (<a href="#distance-to-the-exact-optimum">Distance to the exact optimum</a>).</em></p>
 
-- Under the binding budget, [DFL has the lowest mean cost of the policies scored on the common test set](#mean-cost-with-a-budget) in all three configurations, at 21.5% (5-bus), 21.3% (case14, $`s = 45`$) and 23.3% (case14, $`s = 55`$) below AlwaysRepair.
-- [Without a budget](#mean-cost-without-a-budget), the outcome depends on the cost regime. DFL is the cheapest of these policies on the 5-bus network (6.7% below AlwaysRepair). On case14, Near-sighted MPC is cheapest, and DFL costs 8.3% more than AlwaysRepair at $`s = 45`$ and 2.1% less at $`s = 55`$, two scales near the crossing point of the [repair-cost sweep](#repair-cost-sensitivity).
-- On the 5-bus network, where dynamic programming gives the [exact optimum](#distance-to-the-exact-optimum), the DFL mean is 1.7% (unbudgeted) and 1.8% (budgeted) above it.
-- A 14-stage test scenario takes DFL 30.0 ms on the 5-bus network and 35.2 ms on case14 ($`s = 45`$), [about as long as the trivial heuristics](#deployment-time), while Near-sighted MPC takes 196 and 2,707 times as long.
-- Training one of the 440 models of the training-size sweeps took at most 17.0 h without the budget and 62.8 h with it ([Run times](#run-times)).
-- Within a wall-clock limit of 117 h 36 min per job, the SAA tree policy [costs more than both DFL and AlwaysRepair](#mean-cost-without-a-budget) in all six configurations, and SDDiP [stops at its time limit](#saa-and-sddip-within-the-time-limit) with estimated gaps of 21.5% to 68.2%.
+[Results](#results) gives the cost tables of all six configurations, the distance to the exact optimum, the sample complexity, the repair-cost sensitivity and the deployment times.
 
 ## Quick start
 
