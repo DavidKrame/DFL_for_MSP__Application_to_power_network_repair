@@ -96,25 +96,6 @@ The last command recomputes the reported numbers from the stored results in [`ex
 
 All rows except the last need only the Python environment. The quick checks and the reproduction script read the PGLib-OPF case14 file, which is downloaded once, and the unit tests use GLPK when it is installed. The full experiments need a SLURM cluster, a Gurobi license for SAA, and Julia for SDDiP, which installs itself on first use. Single jobs run for up to 117 h 36 min (`--time=117:36:00`). The laptop times were measured on Apple Silicon with Python 3.11 and `requirements-lock.txt`.
 
-### First runs
-
-1. `python verify_installation.py` builds the 5-bus model and an extensive-form MIP without solving it, lists the solvers it finds and ends with `Total: 7/7 tests passed`. Without gurobipy, Pyomo prints an expected warning that it cannot import it.
-
-2. `bash scripts/quick_check.sh` runs the nine steps of [Laptop check](scripts/README.md#laptop-check) in about a minute, from the installation check to a redraw of every figure compared with `figures/`, and ends with `Passed: 9   Failed: 0`. Without an active environment, name the interpreter, as in `PYTHON=.venv/bin/python bash scripts/quick_check.sh`. `--with-sddip` adds a 5-iteration SDDiP run and installs Julia on first use.
-
-3. Train and evaluate a small DFL policy on the 5-bus network at its reported repair-cost scale:
-
-   ```bash
-   python Pseudo_DFL_main.py --network toy --repair-base-scale 100 \
-       --n-train 500 --n-eval 100 --eval-seed 1000 --output-dir /tmp/dfl_toy_n500
-   ```
-
-   This solves 500 label MIPs with one worker process per CPU (most of the run time, a few minutes on a 10-core laptop), trains for 50 epochs, evaluates DFL, AlwaysRepair and NoRepair on 100 test scenarios and prints a cost summary. The output folder holds `evaluation.json`, `model.pt`, `config_snapshot.json` and plots. The labels are cached in `data_cache_scale100/toy/seed42/training_data.pkl` under the working directory and reused by later runs with the same network, scale and seed. If the run is interrupted while it solves the labels, delete this file before running again: the partial cache already has its full size, so later runs would train on the solved scenarios only.
-
-   At 500 training scenarios DFL is still more expensive than AlwaysRepair, and in the stored sweep it is cheaper from 2,000 on. `--with-mpc` adds Near-sighted MPC, at about 6 s per test scenario plus about 5 minutes for its repair heatmap, which simulates MPC again on 50 test scenarios.
-
-The [Repository guide](#repository-guide) describes the files, and [Results](#results) explains the reported numbers.
-
 ## The problem
 
 An operator runs a transmission network for 14 stages after the onset of a severe-weather event. At every stage, each generator and line in service fails with a probability that peaks at the first stage and then decays, and failures are independent across components and stages. The operator observes the failures, dispatches the network that remains, and decides which failed components to repair. Repairs are binary and change the network for all later stages, so minimizing the expected total cost of generation, load shedding and repairs is a multistage stochastic mixed-integer program.
@@ -702,6 +683,7 @@ python Pseudo_DFL_main.py --network toy --repair-base-scale 100 --n-train 2000 \
 
 - For case14, use `--network case14 --repair-base-scale 45`, or `55` for the second case14 lane, and replace `toy` in `--output-dir` by `case14` or `case14_scale55`, so that each lane keeps its own folder. For the budgeted variant, add `--repair-budget-fraction 0.3` and write to `runs/paper_budget0.3/` instead.
 - Run the sizes in increasing order from the same working directory, so that the label cache grows instead of being rebuilt.
+- If a run is interrupted while it solves the labels, delete its cache file (`data_cache_scale100/toy/seed42/training_data.pkl` for the command above) before running again: the partial cache already has its full size, so later runs would train on the solved scenarios only.
 - `--with-mpc` evaluates Near-sighted MPC once and caches it. On case14 this alone takes about 13 hours for 500 test scenarios, and the repair heatmaps of every run simulate MPC again on 50 test scenarios. Leave it out, or add MPC afterwards with `python inject_mpc_baseline.py --network toy --window 3 runs/paper_unbudgeted/toy/dfl_train*/seed_*` and aggregate again. The module docstring of [`inject_mpc_baseline.py`](inject_mpc_baseline.py) lists the checks it makes.
 - Repeat with `--init-seeds 1`, `2`, `3` and `4` into the matching `seed_<seed>/` folders, then aggregate with `python aggregate_multiseed.py --root runs/paper_unbudgeted`.
 
