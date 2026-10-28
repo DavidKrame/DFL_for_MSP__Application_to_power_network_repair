@@ -27,7 +27,7 @@ The files use the names of the code.
 
 | Name in files and code | Meaning |
 |---|---|
-| `toy` | The synthetic 5-bus network: 2 generators, 5 lines and 3 loads, so 7 failure-prone components. Run at repair-cost scale $`s = 100`$. |
+| `toy` | The synthetic 5-bus network of the paper: 2 generators, 5 lines and 3 loads, so 7 failure-prone components. Run at repair-cost scale $`s = 100`$. |
 | `case14` | The IEEE 14-bus network of PGLib-OPF v23.07 (`pglib_opf_case14_ieee.m`): 5 generators, 20 branches and 11 loads, so 25 failure-prone components. Run at $`s = 45`$. |
 | `case14_scale55` | The same network at $`s = 55`$. Only the folder name carries the scale. The code still calls the network `case14`. |
 | `paper_unbudgeted` | Runs without a repair budget. |

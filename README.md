@@ -118,7 +118,7 @@ A component whose repair completes at a stage is not exposed to the failures of 
 |---|---|---|
 | Failure probabilities $`\lambda^t[k]`$ | `ModelParameters` in [`model_parameters.py`](model_parameters.py), constants in [`config.py`](config.py) | $`K = 1.5`$, $`t^* = 1`$; standard ($`p_{\max} \sim \mathcal{U}[0.55, 0.70]`$) or elevated ($`p_{\max} \sim \mathcal{U}[0.80, 0.90]`$) components, drawn once with the model seed 42 |
 | Availability and repairs | rollouts in [`Pseudo_DFL_solver.py`](Pseudo_DFL_solver.py) | $`\tau = 1`$ |
-| Stage dispatch $`Q^0(a^t)`$ (DC-OPF with explicit flows, big-M on failed lines, load shedding) | `StagewiseOPF` in [`Pseudo_DFL_stage_opf.py`](Pseudo_DFL_stage_opf.py), checked by [`test_bigM_validity.py`](tests/README.md#test_bigm_validitypy-2-tests) | $`\alpha = 1{,}000`$ USD/MWh, one hour per stage |
+| Stage dispatch $`Q^0(a^t)`$ (DC-OPF with explicit flows, big-M on failed lines, load shedding) | `StagewiseOPF` in [`Pseudo_DFL_stage_opf.py`](Pseudo_DFL_stage_opf.py), checked by [`test_bigM_validity.py`](tests/test_bigM_validity.py) | $`\alpha = 1{,}000`$ USD/MWh, one hour per stage |
 | Repair costs $`\beta`$ and budget $`B`$ | [`model_parameters.py`](model_parameters.py) | bases $`550\,s`$ (generators) and $`350\,s`$ (lines) USD, scaled by capacity; `--repair-base-scale` sets $`s`$ and `--repair-budget-fraction` sets $`\varphi`$ |
 
 The MIPs of the DFL labels, SAA and SDDiP also handle $`\tau > 1`$, but the inputs of the DFL network contain no repair pipeline, so the learned policy assumes $`\tau = 1`$. The experiments use $`s = 100`$ on the 5-bus network and $`s = 45`$ and $`s = 55`$ on case14, and $`\varphi = 0.3`$, which gives budgets of 85,500, 131,625 and 160,875 USD per stage.
@@ -131,7 +131,7 @@ The MIPs of the DFL labels, SAA and SDDiP also handle $`\tau > 1`$, but the inpu
 
 | Name in code | Network | Buses | Generators | Lines | Loads | Notes |
 |---|---|--:|--:|--:|--:|---|
-| `toy` | synthetic 5-bus | 5 | 2 | 5 | 3 | built in; data in [exact_dp/README.md](exact_dp/README.md#the-model) |
+| `toy` | the synthetic 5-bus network of the paper | 5 | 2 | 5 | 3 | built in; data in [exact_dp/README.md](exact_dp/README.md#the-model) |
 | `case14` | IEEE 14-bus from PGLib-OPF | 14 | 5 | 20 | 11 | downloaded on first use; three generators are synchronous condensers with zero capacity, repaired for free |
 
 ## The DFL policy
@@ -470,7 +470,7 @@ The code runs in place and needs no build step. Python 3.11 is the validated ver
 
 ## Reproducing the experiments
 
-The experiments can be reproduced at three levels. The stored results give every reported number and figure in seconds. Single DFL runs work on a workstation, as do short test runs of SAA and SDDiP, and the full experiments need a SLURM cluster. The cluster scripts organize the runs in three lanes, each one network at one repair-cost scale: lanes 0, 1 and 2 are `toy` at $`s = 100`$, `case14` at $`s = 45`$ and `case14` at $`s = 55`$ ([Lanes](scripts/README.md#lanes)).
+The experiments can be reproduced at three levels. The stored results give every reported number and figure in seconds. Single DFL runs work on a workstation, as do short test runs of SAA and SDDiP, and the full experiments need a SLURM cluster. The cluster scripts organize the runs in three lanes, each one network at one repair-cost scale: lanes 0, 1 and 2 are `toy` (the 5-bus network) at $`s = 100`$, `case14` at $`s = 45`$ and `case14` at $`s = 55`$ ([Lanes](scripts/README.md#lanes)).
 
 <details>
 <summary>The three levels at a glance</summary>
@@ -650,6 +650,9 @@ When a PGLib case is loaded, minimum generator outputs are set to 0 and only the
 
 ### Step by step, with case30 as the example
 
+<details>
+<summary>Six steps from loading the case to running it on the cluster, and further settings</summary>
+
 The steps below use the IEEE 30-bus case (`case30`) as the example network.
 
 1. Check that the case loads and that the intact network serves its load. From the repository root, the command below prints the stage cost and the load shed with every component available, `7,506.48 USD per stage, 0.0 MW shed` for case30:
@@ -699,6 +702,8 @@ Further settings:
 - The MIP models, SAA and SDDiP handle $`\tau > 1`$, but the DFL features contain no repair pipeline, so the learned policy assumes $`\tau = 1`$.
 - Label generation runs one process per CPU, capped by `SLURM_CPUS_PER_TASK`. The cluster jobs requested 112 GB for 64 workers.
 
+</details>
+
 ## Repository guide
 
 ### Folder READMEs
@@ -708,7 +713,7 @@ Further settings:
 - [`scripts/README.md`](scripts/README.md): helper and cluster scripts, lanes and how to add one, submission order, resubmission, recorded run times and other clusters.
 - [`scripts/slurm/smoke/README.md`](scripts/slurm/smoke/README.md): short jobs that check the cluster setup before the long runs.
 - [`exact_dp/README.md`](exact_dp/README.md): the data of the 5-bus network, its exact DP, why the DP is exact and what its output files hold.
-- [`tests/README.md`](tests/README.md): what each test file checks, and how to run the tests on another network.
+- [`tests/README.md`](tests/README.md): running the tests, optional solvers, what is not covered, and how to run the tests on another network.
 
 ### Parameters and names
 
@@ -848,7 +853,7 @@ The suite uses the 5-bus network (and one hand-built 3-bus network), so it needs
 | `test_derated_mpc_opf.py` | 2 | the derated LP of Near-sighted MPC matches the big-M LP at binary availability and scales with fractional availability |
 | `test_saa_tree.py` | 12 | scenario-tree structure and reproducibility, and small tree SAA solves and rollouts (5 slow) |
 
-The suite does not test the DFL pipeline, repair budgets, the MPC schedule search, SDDiP or the exact DP. [tests/README.md](tests/README.md) gives every test and what a pass guarantees.
+The suite does not test the DFL pipeline, repair budgets, the MPC schedule search, SDDiP or the exact DP. [tests/README.md](tests/README.md) covers running subsets, the optional solvers and extending the suite.
 
 </details>
 

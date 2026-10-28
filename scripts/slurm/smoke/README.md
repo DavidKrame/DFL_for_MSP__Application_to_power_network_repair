@@ -30,6 +30,8 @@ With no environment variable set, all three layers use HiGHS. `ED_OPF_SOLVER=gur
 
 ## What each job checks
 
+`toy` is the synthetic 5-bus network of the paper.
+
 | Job | Solver | Network | Checks |
 |---|---|---|---|
 | `smoke_0_env.sh` | probes both | toy, case14 | environment, solver selection, Gurobi license, case14 load |

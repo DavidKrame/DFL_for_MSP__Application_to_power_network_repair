@@ -40,7 +40,7 @@ pandapower prints a harmless note that "3 branches ... are considered as trafos"
 | File in `figures/` | What it shows | Data |
 |---|---|---|
 | `failure_probability_profiles.png` | Failure probability of an operational component over the 14 stages, for the Standard and Elevated vulnerability classes | `config.py` |
-| `paper/<lane>/convergence_multiseed.png` | DFL mean cost against the training size (five-seed mean, ± one across-seed std), with AlwaysRepair, NoRepair and Near-sighted MPC as horizontal lines; `<lane>` is `toy`, `case14` or `case14_scale55` | aggregated `evaluation.json` of every `experiments/paper_unbudgeted/dfl_scaling_multiseed/<lane>/dfl_train*/` |
+| `paper/<lane>/convergence_multiseed.png` | DFL mean cost against the training size (five-seed mean, ± one across-seed std), with AlwaysRepair, NoRepair and Near-sighted MPC as horizontal lines; `<lane>` is `toy` (the 5-bus network), `case14` or `case14_scale55` (case14 at $`s = 55`$) | aggregated `evaluation.json` of every `experiments/paper_unbudgeted/dfl_scaling_multiseed/<lane>/dfl_train*/` |
 | `paper/<lane>/convergence_multiseed_budget.png` | The same with the per-stage budget $`\varphi = 0.3`$ | `experiments/paper_budget0.3/dfl_scaling_multiseed/<lane>/` |
 | `sensitivity/cost_vs_scale_{toy,case14}.png` | $`(\bar c_{\mathrm{AR}} - \bar c_{\mathrm{DFL}})/\bar c_{\mathrm{DFL}}`$ in % against the repair-cost scale $`s`$ (one DFL model, seed 42, 120,000 training scenarios) | `experiments/sensitivity/sensitivity_curve.txt` |
 | `paper/toy/sddip_convergence.png` | SDDiP lower bound and forward-pass cost per iteration on the 5-bus network without budget, and their relative difference | `convergence` of `experiments/paper_unbudgeted/toy/SDDiP/sddip_solution.json` |

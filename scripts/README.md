@@ -13,7 +13,7 @@ Names used in the code, the scripts and the result files:
 
 | Name | Meaning |
 |---|---|
-| `toy` | the synthetic 5-bus network (2 generators, 5 lines, 7 failure-prone components), run at repair-cost scale $`s = 100`$ |
+| `toy` | the synthetic 5-bus network of the paper (2 generators, 5 lines, 7 failure-prone components), run at repair-cost scale $`s = 100`$ |
 | `case14` | the IEEE 14-bus network from PGLib-OPF (5 generators, 20 branches), run at $`s = 45`$ |
 | `case14_scale55` | result folder of case14 at $`s = 55`$ |
 | `Pseudo_DFL` | the DFL policy |
