@@ -112,8 +112,6 @@ flowchart LR
 
 A component whose repair completes at a stage is not exposed to the failures of that stage. Dispatch and repairs use only the failures observed so far, so every policy is non-anticipative.
 
-Notation: stages are numbered $`t = 1, \dots, T`$ with $`T = 14`$. The index $`k`$ runs over the $`N_G`$ generators and then the $`N_E`$ lines, so the availability $`a^t = (a_g^t, a_e^t)`$, the failure events $`\xi^t`$ and the repairs $`r^t`$ are vectors in $`\{0,1\}^{N_G+N_E}`$, with $`a^t[k] = 1`$ when component $`k`$ is in service. $`\odot`$ is the element-wise product, inequalities between vectors hold element-wise, and $`\mathbf{1}`$ and $`\mathbf{0}`$ are the all-ones and all-zeros vectors.
-
 ### Failures
 
 Failure events are independent across components and stages, with $`\xi^t[k] \sim \mathrm{Bernoulli}(\lambda^t[k])`$. An event fails component $`k`$ only if it is in service, so $`\lambda^t[k]`$ is the failure probability of an operational component. Its logit is a log-linear function of the stage, scaled so that the curve peaks at stage $`t^*`$ with value $`p_{\max}[k]`$:
