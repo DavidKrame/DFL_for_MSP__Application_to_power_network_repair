@@ -239,75 +239,7 @@ DFL, NoRepair, AlwaysRepair, Near-sighted MPC and SAA are scored on the same 500
 | SDDiP | SDDP.jl with Lagrangian cuts | [`SDDiP_main.py`](SDDiP_main.py) | `SDDiP/` |
 | Exact DP | backward recursion over all states of the 5-bus network | [`exact_dp/exact_dp_toy.py`](exact_dp/exact_dp_toy.py) | `experiments/exact_dp_toy/` |
 
-### NoRepair and AlwaysRepair
-
-NoRepair never repairs. AlwaysRepair repairs every failed component at every stage except the last, where a repair could not complete within the horizon. With a budget, AlwaysRepair repairs the cheapest failed components first, as many as the budget allows, also except at the last stage.
-
-### Near-sighted MPC
-
-Near-sighted MPC is a certainty-equivalent receding-horizon controller (model predictive control, MPC) without learning, implemented as `NearSightedMPCRollout` in [`Pseudo_DFL_solver.py`](Pseudo_DFL_solver.py). At each stage it assigns every failed component either to one of the stages of a window of $`W = 3`$ stages at which its repair can still take effect, or to "never". It scores each such schedule by rolling the availability forward at the mean failure rates and pricing every window stage with a DC-OPF on the derated network. The score adds the repair costs and assigns zero value after the window. The controller then executes only the repairs of the current stage and replans at the next stage. Under a budget, schedules that overspend at any stage of the window are skipped.
-
-All schedules are scored when there are at most $`3^7 = 2{,}187`$ of them, which with $`W = 3`$ holds at every stage with at most seven failed components, and therefore at every stage on the 5-bus network. Otherwise, the all-never schedule and 2,186 schedules sampled with a fixed seed are scored.
-
-<details>
-<summary>Near-sighted MPC in formulas: schedule count, rollout and schedule cost</summary>
-
-With $`L_t = \min(W, T - t + 1)`$ stages in the window and $`F^t`$ the set of failed components, a repair can be ordered at one of $`L_t - \tau`$ window stages or never, which gives $`(L_t - \tau + 1)^{\lvert F^t \rvert}`$ schedules (the code counts stages from 0 and writes the window as `min(W, T - t)`). On case14 the schedules are sampled when 8 or more components are failed in a window of three stages, or 12 or more in a window of two, since $`3^8 > 2{,}187`$ and $`2^{12} > 2{,}187`$.
-
-A schedule $`S`$ lists the components whose repair it orders at each window step $`j = 0, \dots, L_t - 1`$, with $`S_j`$ empty outside the actionable steps and $`\mathbf{1}[S_j]`$ the indicator vector of $`S_j`$. The scored schedules form the set $`\mathcal{S}_t`$: all schedules, or the all-never schedule and the sampled ones, in both cases without those that overspend the budget. The rollout replaces the failures by their means, and the schedule cost adds the dispatch cost and the repair cost of every window step:
-
-```math
-\begin{aligned}
-\bar a^{(0)} &= a^t,
-\qquad
-\bar a^{(j+1)} = \bar a^{(j)} \odot \big(\mathbf{1} - \lambda^{t+j+1}\big) + \big(\mathbf{1} - \bar a^{(j)}\big) \odot \mathbf{1}[S_{j+1-\tau}],
-\quad j = 0, \dots, L_t - 2,\\[4pt]
-\widehat{J}_t(S) &= \sum_{j=0}^{L_t - 1} \Big[\,Q^0\big(\bar a^{(j)}\big) + \beta^\top \mathbf{1}[S_j]\Big],
-\qquad
-r^t = \mathbf{1}[S_0^\star],\quad S^\star \in \arg\min_{S \in \mathcal{S}_t}\ \widehat{J}_t(S)
-\end{aligned}
-```
-
-At fractional availability, $`Q^0`$ is evaluated on the derated network, in which availability scales line susceptances, line limits and generator capacities (`StagewiseOPF.solve_derated` in [`Pseudo_DFL_stage_opf.py`](Pseudo_DFL_stage_opf.py)). Only the step-0 repairs are executed, and nothing after the window is valued. The sampled schedules are drawn uniformly with replacement, with sampling seed 0.
-
-</details>
-
-The docstrings of `NearSightedMPCRollout`, its method `_sample_assignments` and `evaluate_mpc_cached` in [`Pseudo_DFL_solver.py`](Pseudo_DFL_solver.py) document the schedule search, the sampling (one NumPy generator per MPC object, seeded with `MPC_SAMPLE_SEED` and shared across stages and scenarios) and the result cache, and [`config.py`](config.py) holds the constants.
-
-### Multistage SAA
-
-Multistage sample average approximation (SAA; `main.py`, folder `SAA`) solves one extensive-form MILP over a sampled scenario tree with 2 children per node, which gives $`2^T = 16{,}384`$ sample paths and $`2^{T+1} - 2 = 32{,}766`$ decision nodes at $`T = 14`$; a node of stage $`t`$ has probability $`2^{-t}`$. Decisions are indexed by tree node, which makes them non-anticipative, and in the budgeted variant the budget applies at every node. The MILP is solved by Gurobi to a 10% relative gap or a time limit of 419,760 s. Out of sample, the node policy runs in closed loop. At every stage, the realized failure vector is matched to the nearest child of the current node in Hamming distance, and the repairs of that child are applied to the components that are actually failed.
-
-<details>
-<summary>Multistage SAA in formulas: tree objective and nearest-child rollout</summary>
-
-With $`\mathcal{N}_t`$ the $`2^t`$ nodes of stage $`t`$, the MILP minimizes the probability-weighted cost of all nodes, subject to the stage constraints at every node and the availability transition from parent to child:
-
-```math
-\min\ \sum_{t=1}^{T}\ \sum_{n \in \mathcal{N}_t} 2^{-t}\Big(c^\top p_g^n + \alpha\,\mathbf{1}^\top\big(p_l - d^n\big) + \beta^\top r^n\Big)
-```
-
-Out of sample, the policy moves at every stage to the child whose sampled failure vector $`\hat\xi^{\,m}`$ is closest to the realized one, taking the first child on ties, and applies that child's repairs to the components that are actually failed:
-
-```math
-n^t = \arg\min_{m\,\in\,\mathrm{children}(n^{t-1})}\ \big\lVert \hat\xi^{\,m} - \xi^t \big\rVert_1,
-\qquad
-r^t = r^{n^t} \odot \big(\mathbf{1} - a^t\big),
-\qquad
-n^0 = \text{root}
-```
-
-The tree is built by `ScenarioGenerator.generate_scenario_tree` in [`scenario_generator.py`](scenario_generator.py), and the rollout by `SAASolver.evaluate_solution` in [`saa_solver.py`](saa_solver.py).
-
-</details>
-
-### SDDiP
-
-`SDDiP_main.py` (folder `SDDiP`) runs stochastic dual dynamic integer programming with SDDP.jl, called from Python through juliacall. The model uses Lagrangian cuts and binary state variables for availability and the repair pipeline, and HiGHS solves the subproblems. Failures are stagewise independent, with all $`2^7 = 128`$ outcomes per stage on the 5-bus network and 256 sampled outcomes per stage on case14. Training stops at a time limit, after which the final policy is simulated 500 times on its own stagewise distribution. The reported values are the final lower bound and the mean cost of these 500 simulations.
-
-### Exact dynamic program
-
-On the 5-bus network (`exact_dp/exact_dp_toy.py`), each component is operational, failed, or failed with a repair pending, so a stage has at most $`3^7 = 2{,}187`$ states and $`2^7 = 128`$ failure outcomes. Backward recursion over all repair subsets, or only the affordable ones under the budget, gives the exact optimal expected cost, and a forward pass recomputes it as a check. [exact_dp/README.md](exact_dp/README.md#why-the-recursion-is-exact) states the recursion, explains why it is exact and documents the output files.
+The docstrings of `NearSightedMPCRollout` in [`Pseudo_DFL_solver.py`](Pseudo_DFL_solver.py) and of `SAASolver.evaluate_solution` in [`saa_solver.py`](saa_solver.py) document the MPC schedule search and the SAA rollout, and [exact_dp/README.md](exact_dp/README.md) states the exact recursion.
 
 ## Results
 
@@ -711,7 +643,7 @@ The steps use the IEEE 30-bus case with the settings of our trial runs. case30 i
 
 5. Size the baselines:
 
-   - `--with-mpc` adds Near-sighted MPC, which scores at most 2,187 repair schedules per stage and samples when there are more ([Near-sighted MPC](#near-sighted-mpc)). Its time per test scenario grows with the number of failed components until this cap binds: on case14 it took 95 s, about 13 h for the 500 test scenarios. The cap is `MPC_SCHEDULE_CAP_RATIO` (default 1) times $`(W - \tau + 1)^{7}`$, rounded up, with the exponent 7 set by `MPC_CAP_REFERENCE_COMPONENTS`, both in [`config.py`](config.py). MPC can also be added later with `inject_mpc_baseline.py` ([Level 2](#level-2-single-runs-on-a-workstation)).
+   - `--with-mpc` adds Near-sighted MPC, which scores at most 2,187 repair schedules per stage and samples when there are more. Its time per test scenario grows with the number of failed components until this cap binds: on case14 it took 95 s, about 13 h for the 500 test scenarios. The cap is `MPC_SCHEDULE_CAP_RATIO` (default 1) times $`(W - \tau + 1)^{7}`$, rounded up, with the exponent 7 set by `MPC_CAP_REFERENCE_COMPONENTS`, both in [`config.py`](config.py). MPC can also be added later with `inject_mpc_baseline.py` ([Level 2](#level-2-single-runs-on-a-workstation)).
    - SAA and SDDiP belong on the cluster. The SAA tree has $`2^T`$ paths at any network size, but the MILP grows with the network, so the time limit binds sooner.
    - SDDiP samples `--n-samples` failure outcomes per stage on networks with 10 or more components (64 for case30). Its binary state has 2 × (generators + lines) variables at $`\tau = 1`$ (50 on case14, 94 on case30), and convergence slows down quickly as it grows.
 
