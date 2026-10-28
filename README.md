@@ -225,30 +225,6 @@ Without a budget, the noise is logistic and the expectation has the closed form 
 
 Here $`\hat r_\varepsilon`$ uses the availability $`a^t = a_i^{*,t}`$ of the row. The stop-gradient $`\mathrm{sg}[\cdot]`$ holds the smoothed decision constant (it is computed under `torch.no_grad()`), so back-propagation passes the Fenchel-Young gradient, smoothed decision minus label, to the network. The loss value itself is not the Fenchel-Young loss and can be negative; it is the value shown in the training logs. Under the budget, the Gaussian draws come from NumPy's unseeded global state, which is why budgeted reruns differ slightly ([Seeds and reproducibility](#seeds-and-reproducibility)). `FenchelYoungLoss` in [`Pseudo_DFL_model.py`](Pseudo_DFL_model.py) implements the loss, and [`Pseudo_DFL_training.py`](Pseudo_DFL_training.py) the training loop.
 
-<details>
-<summary>Why the gradient is the smoothed decision minus the label</summary>
-
-For a linear objective over a finite feasible set $`\mathcal{Y}`$, perturbation defines a smooth convex function $`F_\varepsilon`$, its gradient $`\hat u_\varepsilon`$ and the Fenchel-Young loss $`L_\varepsilon`$:
-
-```math
-\begin{aligned}
-F_\varepsilon(\eta) &= \mathbb{E}_{Z}\Big[\max_{u \in \mathcal{Y}}\ (\eta + \varepsilon Z)^\top u\Big],\\
-\hat u_\varepsilon(\eta) &= \nabla F_\varepsilon(\eta) = \mathbb{E}_{Z}\Big[\arg\max_{u \in \mathcal{Y}}\ (\eta + \varepsilon Z)^\top u\Big],\\
-L_\varepsilon(\eta;\, u^*) &= F_\varepsilon(\eta) + \varepsilon\,\Omega(u^*) - \eta^\top u^* \;\ge\; 0,\\
-\nabla_\eta L_\varepsilon(\eta;\, u^*) &= \hat u_\varepsilon(\eta) - u^*
-\end{aligned}
-```
-
-The regularizer $`\Omega`$, the convex conjugate of $`F_1`$, is fixed by the noise distribution and never has to be computed. For the repair problem, $`u`$ is the repair vector, $`u^*`$ the label and $`\mathcal{Y}`$ the feasible set of the stage problem, with or without the budget. Logistic noise gives the sigmoid of the unbudgeted closed form. Gaussian noise would give the normal distribution function instead, $`\Phi(\eta[k]/\varepsilon)\,(1 - a^t[k])`$, which is also the limit of the budgeted estimate as $`M`$ grows when the budget never binds. The paper develops this theory and its guarantees.
-
-</details>
-
-The reported runs use the settings below. In experiments/README.md, [Settings shared by all runs](experiments/README.md#settings-shared-by-all-runs) lists the settings common to all stored runs, [Run configuration](experiments/README.md#run-configuration) the full configuration snapshot, and [Trained models](experiments/README.md#trained-models) the initialization, the epoch budget and the epochs trained.
-
-- Network: hidden layers of 128, 256 and 128 units with ReLU and dropout 0.3; 8 inputs and 7 outputs on the 5-bus network, 26 and 25 on case14.
-- Optimizer: Adam (learning rate 1e-3, weight decay 1e-5), batch 64, gradient clipping at 1.0, a random 80/20 split of the rows, ReduceLROnPlateau on the validation loss (patience 200, factor 0.5) and early stopping (patience 330) with the best weights restored.
-- Sweep: 15 training sizes from 25 to 120,000 scenarios, each trained from the init seeds 1, 2, 3, 4 and 42.
-
 ## Baselines and the exact optimum
 
 DFL, NoRepair, AlwaysRepair, Near-sighted MPC and SAA are scored on the same 500 held-out test scenarios (seed 1000, drawn independently of the training scenarios). SDDiP is scored on its own policy simulations, and the exact DP gives the optimal expected cost of the 5-bus network.
