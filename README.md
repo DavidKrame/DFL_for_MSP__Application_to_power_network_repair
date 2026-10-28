@@ -871,7 +871,7 @@ Further settings:
 ### Folder READMEs
 
 - [`experiments/README.md`](experiments/README.md): layout and file formats of the stored results, and the file and key behind each reported number.
-- [`paper/README.md`](paper/README.md): the two scripts that recompute the reported numbers and figures, what each of the 112 checks compares, and how to pin and verify the case14 file.
+- [`paper/README.md`](paper/README.md): the two scripts that recompute the reported numbers and figures, and how to pin and verify the case14 file.
 - [`scripts/README.md`](scripts/README.md): helper and cluster scripts, lanes and how to add one, submission order, resubmission, recorded run times and other clusters.
 - [`scripts/slurm/smoke/README.md`](scripts/slurm/smoke/README.md): short jobs that check the cluster setup before the long runs.
 - [`exact_dp/README.md`](exact_dp/README.md): the data of the 5-bus network, its exact DP, why the DP is exact and what its output files hold.

@@ -396,7 +396,7 @@ Other percentages in the text, such as DFL relative to Near-sighted MPC, are rat
 
 ## From files to figures
 
-`paper/make_paper_figures.py` draws the figures into `figures/`, or into the folder given with `--out`. [paper/README.md](../paper/README.md) describes what each figure shows, with previews. The script reads these keys:
+`paper/make_paper_figures.py` draws the figures into `figures/`, or into the folder given with `--out`. [paper/README.md](../paper/README.md) describes what each figure shows. The script reads these keys:
 
 | Figure | Keys read |
 |---|---|
