@@ -333,7 +333,8 @@ On the 5-bus network, the exact DP gives the optimal expected cost of both varia
 
 ### Sample complexity
 
-The figures show the DFL mean cost (± across-seed std) against the number of training scenarios. The horizontal lines mark AlwaysRepair (dashed), NoRepair (dotted) and Near-sighted MPC (dash-dotted).
+<details>
+<summary>The figures below show the DFL mean cost (± across-seed std) against the number of training scenarios. The horizontal lines mark AlwaysRepair (dashed), NoRepair (dotted) and Near-sighted MPC (dash-dotted).</summary>
 
 <p align="center">
   <img src="figures/paper/toy/convergence_multiseed.png" width="48%" alt="Mean DFL cost against the number of training scenarios on the 5-bus network without a budget, with the AlwaysRepair, NoRepair and Near-sighted MPC levels">
@@ -346,6 +347,8 @@ The figures show the DFL mean cost (± across-seed std) against the number of tr
   <img src="figures/paper/case14_scale55/convergence_multiseed_budget.png" width="48%" alt="Mean DFL cost against the number of training scenarios on case14 at s = 55 with the budget, with the AlwaysRepair, NoRepair and Near-sighted MPC levels">
 </p>
 <p align="center"><em>Budgeted (budget fraction 0.3): 5-bus network at s = 100 (left) and case14 at s = 55 (right).</em></p>
+
+</details>
 
 - Without a budget, DFL is cheaper than AlwaysRepair on the 5-bus network at every size from 2,000 training scenarios on, and from 15,000 on its across-seed std stays at or below 28,052 USD. On case14 at $`s = 55`$, the lowest DFL mean, 2,318,269 USD, is reached at 100,000 training scenarios, and Near-sighted MPC stays below DFL at every size.
 - With the budget, DFL is below Near-sighted MPC at every training size on both plotted networks, and below AlwaysRepair at every size from 2,000 training scenarios on (from 1,000 on case14 at $`s = 55`$).
@@ -372,7 +375,8 @@ DFL is ahead of AlwaysRepair at every scale on the 5-bus network, by +0.36% to +
 
 ### SAA and SDDiP within the time limit
 
-SAA runs, with the out-of-sample mean on the common test set:
+<details>
+<summary>SAA runs, with the out-of-sample mean on the common test set</summary>
 
 | Configuration | MIP gap reached | In-sample objective (USD) | Solve time | Termination | Out-of-sample mean (USD) |
 |---|--:|--:|--:|---|--:|
@@ -385,7 +389,10 @@ SAA runs, with the out-of-sample mean on the common test set:
 
 All six SAA runs used Gurobi 10.0.1. The in-sample objective is the incumbent of the tree MILP over its 16,384 sample paths, and the out-of-sample mean is the cost of the nearest-child rollout on the test set, as in the cost tables.
 
-SDDiP runs, with the policy mean over SDDiP's own 500 simulations:
+</details>
+
+<details>
+<summary>SDDiP runs, with the policy mean over SDDiP's own 500 simulations</summary>
 
 | Configuration | Iterations | Cuts | Lower bound (USD) | Policy mean (USD) | Estimated gap | Run time |
 |---|--:|--:|--:|--:|--:|--:|
@@ -397,6 +404,8 @@ SDDiP runs, with the policy mean over SDDiP's own 500 simulations:
 | case14 ($`s = 55`$), budgeted | 147 | 1,911 | 927,540 | 2,304,480 | 59.8% | 109.9 h |
 
 The simulations draw from SDDiP's own stagewise distribution (exact on the 5-bus network, 256 sampled outcomes per stage on case14), not from the common test set. Their individual costs were not kept, so `reconstruct_saved_sddip_mean` in `exact_dp/exact_dp_toy.py` rebuilds the policy mean from the saved stagewise averages, exactly, because the stage cost is affine. The `upper_bound` and `gap` fields of `sddip_solution.json` come from the single forward pass of the last training iteration, not from a statistical bound ([experiments/README.md](experiments/README.md#sddip)). [figures/paper/toy/sddip_convergence.png](figures/paper/toy/sddip_convergence.png) traces this forward-pass cost and the lower bound over the training of the unbudgeted 5-bus run ([The figures](paper/README.md#the-figures) describes it).
+
+</details>
 
 ### Deployment time
 
@@ -415,6 +424,9 @@ Everything runs in the Python environment below. Julia is needed only for SDDiP 
 
 ### Python environment
 
+<details>
+<summary>Python version, lock file, and notes for Linux, Intel Macs and Windows</summary>
+
 The code runs in place and needs no build step. Python 3.11 is the validated version, and the first three commands under [Quick start](#quick-start) create the environment. If `python3.11 --version` fails, install Python 3.11 first (for example from python.org, or with `brew install python@3.11`, pyenv, uv or conda), or replace `python3.11` with the full path of a Python 3.11 interpreter.
 
 `requirements-lock.txt` pins the exact versions of an environment in which the tests pass, `scripts/quick_check.sh` succeeds and `paper/reproduce_paper_numbers.py` passes all 112 checks. `requirements.txt` gives only lower bounds, apart from `pandapower==3.2.1` and `pandas<3`. Use it when the lock file does not install on your platform.
@@ -429,7 +441,12 @@ The code runs in place and needs no build step. Python 3.11 is the validated ver
 - The lock file requires Python 3.11 or newer. Its PyTorch version has wheels for Apple Silicon (macOS 14 or newer), for Linux with glibc 2.28 or newer and for 64-bit Windows, but not for Intel Macs, where `requirements.txt` is the untested fallback.
 - On Windows, the shell scripts need bash, and the default output folder names contain a colon, so always pass `--output-dir`. SDDiP has not been run on Windows, and WSL2 avoids these issues. All reported runs used Linux and macOS.
 
+</details>
+
 ### Julia, Gurobi, solvers and the case14 file
+
+<details>
+<summary>Julia for SDDiP, Gurobi, solver selection and the case14 file</summary>
 
 - SDDiP calls SDDP.jl through juliacall, and nothing has to be installed by hand. The first SDDiP run, or any first `import juliacall`, installs a Julia 1.x release (1.10 or newer) and the packages listed in `juliapkg.json` (SDDP.jl, JuMP, HiGHS.jl and JSON.jl), which needs internet access and takes several minutes. To install ahead of time, run from the repository root, where juliapkg finds `juliapkg.json`:
 
@@ -449,9 +466,14 @@ The code runs in place and needs no build step. Python 3.11 is the validated ver
 - `solver_config.py` selects the solver of three layers from `ED_OPF_*` environment variables, which it reads at import: layer A for the Pyomo MIPs of the DFL labels and SAA, layer B for the SDDP.jl subproblems and layer C for the stage LPs of every rollout. All three use HiGHS by default, and `ED_OPF_SOLVER=gurobi` moves all three to Gurobi. [Solver selection](scripts/README.md#solver-selection) lists the per-layer variables, the command-line flags `--solver` and `--lp-method`, and the solvers of the reported runs. Variables left set in the shell also change the solver of the unit tests.
 - Every case14 run, and `paper/reproduce_paper_numbers.py`, loads `pglib_opf_case14_ieee.m`, downloaded on first use from the master branch of [PGLib-OPF](https://github.com/power-grid-lib/pglib-opf) into `~/.cache/pglib_opf/`. The download is not checksummed, so delete a truncated file and run again. The experiments used the file of PGLib-OPF v23.07, which is identical to the master-branch file at the time of writing, and [The case14 network file](paper/README.md#the-case14-network-file) shows how to pin that version, prepare a machine without internet access and check the SHA-256. Loading a PGLib case needs pandapower and matpowercaseframes (both in the requirements), and for case14 pandapower prints a harmless note that "3 branches ... are considered as trafos".
 
+</details>
+
 ## Reproducing the experiments
 
 The experiments can be reproduced at three levels. The stored results give every reported number and figure in seconds. Single DFL runs work on a workstation, as do short test runs of SAA and SDDiP, and the full experiments need a SLURM cluster. The cluster scripts organize the runs in three lanes, each one network at one repair-cost scale: lanes 0, 1 and 2 are `toy` at $`s = 100`$, `case14` at $`s = 45`$ and `case14` at $`s = 55`$ ([Lanes](scripts/README.md#lanes)).
+
+<details>
+<summary>The three levels at a glance</summary>
 
 | Level | What it reproduces | Needs |
 |---|---|---|
@@ -459,7 +481,12 @@ The experiments can be reproduced at three levels. The stored results give every
 | [2. Single runs](#level-2-single-runs-on-a-workstation) | one DFL run at a time, with NoRepair, AlwaysRepair and Near-sighted MPC, and short test runs of SAA and SDDiP | Python environment with HiGHS, and Julia for SDDiP |
 | [3. Full pipeline](#level-3-the-full-pipeline-on-a-slurm-cluster) | all stored results | SLURM cluster, more than 4,000 hours of 64-core jobs, Gurobi for SAA |
 
+</details>
+
 ### Level 1: from the stored results
+
+<details>
+<summary>Recompute the numbers and figures, and evaluate a stored model again</summary>
 
 These commands need no solver:
 
@@ -468,7 +495,7 @@ python paper/reproduce_paper_numbers.py                    # 112 checks, about 3
 python paper/make_paper_figures.py --out /tmp/figures      # 10 figures, about 3 s
 ```
 
-`reproduce_paper_numbers.py` prints each reported value next to the value recomputed from `experiments/`, exits with status 1 on any mismatch and writes nothing apart from the PGLib download cache. `make_paper_figures.py` overwrites `figures/` when `--out` is omitted. [paper/README.md](paper/README.md) lists the files each script reads and explains the pixel differences that another build of matplotlib produces. The aggregated `dfl_train<N>/evaluation.json` files and the sensitivity table `sensitivity_curve.txt` can be rebuilt byte for byte from the stored per-run files, with the commands under [DFL results aggregated over seeds](experiments/README.md#dfl-results-aggregated-over-seeds) and [Repair-cost sensitivity sweep](experiments/README.md#repair-cost-sensitivity-sweep).
+`reproduce_paper_numbers.py` prints each reported value next to the value recomputed from `experiments/`, exits with status 1 on any mismatch and writes nothing apart from the PGLib download cache. `make_paper_figures.py` overwrites `figures/` when `--out` is omitted. [paper/README.md](paper/README.md) describes both scripts and the figures. The aggregated `dfl_train<N>/evaluation.json` files and the sensitivity table `sensitivity_curve.txt` can be rebuilt byte for byte from the stored per-run files, with the commands under [DFL results aggregated over seeds](experiments/README.md#dfl-results-aggregated-over-seeds) and [Repair-cost sensitivity sweep](experiments/README.md#repair-cost-sensitivity-sweep).
 
 A stored DFL model can also be evaluated again on the test set:
 
@@ -481,7 +508,12 @@ python Pseudo_DFL_main.py --mode evaluate --network toy --repair-base-scale 100 
 
 This needs only the stage LPs, takes about 30 s and reproduces the stored per-scenario costs of DFL, AlwaysRepair and NoRepair exactly. [Loading the files in Python](experiments/README.md#loading-the-files-in-python) gives the comparison with the stored file, which prints `True`. For a budgeted model, add `--repair-budget-fraction 0.3` and point `--load-model` to, for example, `experiments/paper_budget0.3/dfl_scaling_multiseed/toy/dfl_train60000/seed_42/model.pt` with `--n-train 60000`. Models are stored only at the reported size of each lane. `--mode train`, `evaluate` and `compare` rebuild the network, parameters and test set from the command line and read nothing from `config_snapshot.json`, so repeat the network, scale, seeds, test-set size, budget and `--hidden-dims` exactly.
 
+</details>
+
 ### Level 2: single runs on a workstation
+
+<details>
+<summary>Single DFL runs, and short test runs of SAA and SDDiP</summary>
 
 Each method can be run on its own with the commands the cluster scripts use. Outside SLURM, label generation starts one worker per CPU and the HiGHS solves of SAA and SDDiP use every CPU. To use fewer, set `SLURM_CPUS_PER_TASK=<n>`, which the code also reads outside SLURM.
 
@@ -509,7 +541,12 @@ python SDDiP_main.py --test --output-dir /tmp/sddip_test
 
 The comparison plots of one DFL run with SAA and SDDiP are described under [Comparison folders](scripts/README.md#comparison-folders).
 
+</details>
+
 ### Level 3: the full pipeline on a SLURM cluster
+
+<details>
+<summary>Setup, the chained job submissions, and notes on resubmission</summary>
 
 The job scripts in [`scripts/slurm/`](scripts/slurm), documented under [Cluster pipelines](scripts/README.md#cluster-pipelines), are those that produced the stored results, with the settings that were used. They were written for the Snellius cluster, with the resources listed under [Computational details](#computational-details). Submit every job from the repository root: the scripts treat the submission directory as the project directory, activate `.venv` there and write their logs to `logs/`, which must exist (`logs/.gitkeep` keeps it, see [Common conventions](scripts/README.md#common-conventions)). Each experiment script skips a run whose result file already exists, and the repository ships these files for all scripts except `dfl_scaling.sh`, so before a rerun move the stored results of the part to be rerun out of `experiments/`, for example with `mkdir -p experiments_stored && mv experiments/paper_unbudgeted experiments_stored/`.
 
@@ -565,7 +602,12 @@ For the budgeted variant (results in `experiments/paper_budget0.3/`), use the sa
 
 On another cluster, adapt the partition (and add `--account` or `--qos` if required), the modules, the node size, the wall clock together with the constant `SLURM_LIMIT` in `saa.sh` and `sddip.sh`, and the Gurobi version and license, or use HiGHS throughout with `SOLVER=appsi_highs` (the SAA results then differ from the reported ones). [Running on another cluster](scripts/README.md#running-on-another-cluster) lists every place to change.
 
+</details>
+
 ### Sensitivity sweep and exact DP
+
+<details>
+<summary>Commands and settings of the sensitivity sweep and the exact DP</summary>
 
 ```bash
 bash scripts/slurm/sensitivity/submit_sensitivity.sh
@@ -578,6 +620,8 @@ python exact_dp/exact_dp_toy.py
 ```
 
 The defaults are the reported settings: both variants, seed 42, $`T = 14`$, $`s = 100`$, $`\varphi = 0.3`$, and SciPy's HiGHS for the 128 stage LPs. It takes about 2 s, writes `exact_dp/results/{unbudgeted,budgeted}/exact_dp_solution.json` (ignored by git) and prints a comparison with the stored 5-bus SDDiP solutions. `sbatch scripts/slurm/exact_dp.sh` writes to `experiments/exact_dp_toy/run_<jobid>/` on the cluster, and [Running it](exact_dp/README.md#running-it) lists the options. `paper/reproduce_paper_numbers.py` reads `experiments/exact_dp_toy/{unbudgeted,budgeted}/exact_dp_solution.json`, so copy a new solution there to use it ([Stored results](exact_dp/README.md#stored-results)).
+
+</details>
 
 ## Applying the code to another network
 
@@ -606,7 +650,7 @@ When a PGLib case is loaded, minimum generator outputs are set to 0 and only the
 
 ### Step by step, with case30 as the example
 
-The steps use the IEEE 30-bus case with the settings of our trial runs. case30 is not part of the study, and no script runs it by default.
+The steps below use the IEEE 30-bus case (`case30`) as the example network.
 
 1. Check that the case loads and that the intact network serves its load. From the repository root, the command below prints the stage cost and the load shed with every component available, `7,506.48 USD per stage, 0.0 MW shed` for case30:
 
@@ -623,7 +667,7 @@ The steps use the IEEE 30-bus case with the settings of our trial runs. case30 i
 
    The unit tests can run on the new network as well: [Extending the tests](tests/README.md#extending-the-tests) names the fixture to change and the parts of the suite that assume the size of the 5-bus network.
 
-2. Choose the repair-cost scale $`s`$ (`--repair-base-scale`). It decides whether repair selection matters at all: with cheap repairs AlwaysRepair is close to optimal, and with very expensive ones NoRepair is. Single runs at a few scales, or the sensitivity sweep, find the range in between ([Repair-cost sensitivity](#repair-cost-sensitivity)). For case30 we used $`s = 25`$. The repair-cost bases 550 and 350 are also written as literals in the files listed next to `GEN_REPAIR_BASE` in [`config.py`](config.py), so changing them in `config.py` alone is not enough.
+2. Choose the repair-cost scale $`s`$ (`--repair-base-scale`). It decides whether repair selection matters at all: with cheap repairs AlwaysRepair is close to optimal, and with very expensive ones NoRepair is. Single runs at a few scales, or the sensitivity sweep, find the range in between ([Repair-cost sensitivity](#repair-cost-sensitivity)). The example uses $`s = 25`$ for case30. The repair-cost bases 550 and 350 are also written as literals in the files listed next to `GEN_REPAIR_BASE` in [`config.py`](config.py), so changing them in `config.py` alone is not enough.
 
 3. Time a few label MIPs before a long run. With `--mode data`, the run only solves the labels, prints `Data generation time` and caches the labels in `data_cache_scale25/case30/seed42/` of the working directory, where the later runs find them:
 
@@ -659,7 +703,7 @@ Further settings:
 
 ### Folder READMEs
 
-- [`experiments/README.md`](experiments/README.md): layout and file formats of the stored results, and the file and key behind each reported number.
+- [`experiments/README.md`](experiments/README.md): layout and file formats of the stored results, the file and key behind each reported number, and the files that are not included.
 - [`paper/README.md`](paper/README.md): the two scripts that recompute the reported numbers and figures, and how to pin and verify the case14 file.
 - [`scripts/README.md`](scripts/README.md): helper and cluster scripts, lanes and how to add one, submission order, resubmission, recorded run times and other clusters.
 - [`scripts/slurm/smoke/README.md`](scripts/slurm/smoke/README.md): short jobs that check the cluster setup before the long runs.
@@ -731,9 +775,12 @@ The parameters of this page are documented constants in [`config.py`](config.py)
 
 ## Computational details
 
-All cluster jobs ran on the Snellius cluster, partition `rome` (AMD EPYC 7H12 nodes), with 1 node and 1 task. The experiment jobs requested 64 CPUs, 112 GB and 117:36:00, and the sensitivity tasks 72:00:00. [Resources and logs](scripts/README.md#resources-and-logs) lists the requests of every job. No GPU was used, and the code has no GPU path: DFL training runs in one CPU process, and the code does not set PyTorch's thread count. The two stored exact-DP solutions were computed on macOS, as their `run_environment` key records, and rerunning the DP reproduces the same optima.
+The cluster jobs ran on the Snellius cluster, partition `rome` (AMD EPYC 7H12 nodes), with 1 node, 1 task, 64 CPUs, 112 GB and up to 117:36:00 per job (72:00:00 for the sensitivity tasks). [Resources and logs](scripts/README.md#resources-and-logs) lists the requests of every job. The code runs on the CPU only.
 
 ### Solvers and settings
+
+<details>
+<summary>Solver and settings of each computation</summary>
 
 | Computation | Solver | Settings |
 |---|---|---|
@@ -745,11 +792,16 @@ All cluster jobs ran on the Snellius cluster, partition `rome` (AMD EPYC 7H12 no
 | Exact DP | SciPy's HiGHS | 128 stage LPs per variant |
 | Sensitivity sweep | as for DFL | `appsi_highs`, the script default |
 
+</details>
+
 ### Seeds and reproducibility
+
+<details>
+<summary>Seeds, and which results reproduce exactly</summary>
 
 | Seed | Value | Set by | Controls |
 |---|---|---|---|
-| model and data seed | 42 | `--seed` | $`p_{\max}`$ and class of every component<br>the training scenarios (scenario i uses NumPy seed [42, i])<br>the train/validation split, batch order and dropout<br>the SAA tree<br>Julia's random number generator in SDDiP |
+| model and data seed | 42 | `--seed` | $`p_{\max}`$ and class of every component<br>the training scenarios (scenario i uses NumPy seed [42, i])<br>the train/validation split, batch order and dropout<br>the SAA tree (one NumPy generator seeded with [42, 2, 14])<br>Julia's random number generator in SDDiP |
 | init seeds | 1, 2, 3, 4, 42 | `--init-seeds` | the initial network weights only |
 | evaluation seed | 1000 | `--eval-seed` | the 500 test scenarios (scenario i uses [1000, i]) |
 | MPC sampling seed | 0 | `MPC_SAMPLE_SEED` in `config.py` | the sampled schedules when the cap binds |
@@ -763,24 +815,15 @@ The failure probabilities depend only on the network and the model seed, so the 
 - Runs stopped by a time limit (SAA on case14, SDDiP) depend on the speed of the hardware.
 - `config_snapshot.json` records `config.py` after the repair-cost scale, the seeds and the budget fraction have been applied, but not most other command-line values. [Reading the files correctly](experiments/README.md#reading-the-files-correctly) and [Run configuration](experiments/README.md#run-configuration) list what the snapshots show for the SAA runs, the init seeds and `FY_MC_SAMPLES`.
 
+</details>
+
 ### Run times
 
-The run times recorded in `experiments/` add up to more than 4,000 hours of 64-core jobs, and [Recorded run times](scripts/README.md#recorded-run-times) breaks them down by method and lane. The longest training of a single model of the training-size sweeps took 17.0 h without the budget (case14, $`s = 55`$, 120,000 scenarios, seed 42) and 62.8 h with it (case14, $`s = 45`$, 120,000 scenarios, seed 4), and a budgeted seed task can need more than one 117:36:00 job. The mean training time per model at every size is `timing.training_s` of the aggregated `dfl_train<N>/evaluation.json` files, tabulated in hours for the sizes from 5,000 on under [Not included, and how to regenerate it](experiments/README.md#not-included-and-how-to-regenerate-it).
+The recorded run times add up to more than 4,000 hours of 64-core jobs, broken down by method and lane under [Recorded run times](scripts/README.md#recorded-run-times). Training a single model of the sweeps took at most 17.0 h without the budget and 62.8 h with it, and a budgeted seed task can need more than one 117:36:00 job.
 
 ### What did not finish
 
-- The budgeted case14 lane at $`s = 55`$ has 13 of the 15 sizes (65 models), because the sizes 100,000 and 120,000 did not finish within the wall-clock limit. The other lanes have all 15 sizes for each of the 5 init seeds.
-- All four SAA runs on case14 stopped at the time limit, with MIP gaps of 42.5% to 60.1%. The 5-bus runs reached the 10% target.
-- All six SDDiP runs stopped at the time limit, after 147 to 782 of the allowed 10,000 iterations, with estimated gaps of 21.5% to 68.2%.
-
-### Further details
-
-- DFL initialization, epoch budget and epochs trained: [Trained models](experiments/README.md#trained-models). The label and MPC caches: [DFL training sweep](scripts/README.md#dfl-training-sweep), and after an interrupted label run, [Skip guards, failures and resubmission](scripts/README.md#skip-guards-failures-and-resubmission).
-- Near-sighted MPC computation time on each lane: `NearSightedMPC.eval_time_s` of the result files, in hours under [Recorded run times](scripts/README.md#recorded-run-times).
-- SAA tree, solve and rollout: [SAA](scripts/README.md#saa) in scripts/README.md and the [stored SAA files](experiments/README.md#saa). The tree comes from one NumPy generator seeded with [42, 2, 14] (`ScenarioGenerator.generate_scenario_tree` in [`scenario_generator.py`](scenario_generator.py)).
-- SDDiP model, sampling, cuts and stopping: [SDDiP](scripts/README.md#sddip) in scripts/README.md and the [stored SDDiP files](experiments/README.md#sddip).
-- Exact DP work and checks: [Why the recursion is exact](exact_dp/README.md#why-the-recursion-is-exact) and [Stored results](exact_dp/README.md#stored-results) in exact_dp/README.md.
-- Files that are not in the repository, and how to regenerate them: [Not included, and how to regenerate it](experiments/README.md#not-included-and-how-to-regenerate-it).
+The budgeted case14 lane at $`s = 55`$ has 13 of the 15 training sizes, because the sizes 100,000 and 120,000 did not finish within the wall-clock limit. The SAA runs on case14 and all SDDiP runs stopped at their time limit ([SAA and SDDiP within the time limit](#saa-and-sddip-within-the-time-limit)).
 
 ## Tests
 
@@ -789,7 +832,25 @@ python -m pytest -q tests                  # 118 tests, about 15 s
 python -m pytest -q -m "not slow" tests    # the 112 fast tests
 ```
 
-Apart from one test on a hand-built 3-bus network, the suite uses only the 5-bus network, so it needs no internet access, case14 or Julia. It checks the failure model, the scenario sampling, the availability dynamics, the stage DC-OPF and its outage model, the derated LP of Near-sighted MPC, and the SAA scenario tree with small SAA solves. It does not test the DFL pipeline (labels, loss, training, knapsack and rollouts), repair budgets, the MPC schedule search, SDDiP or the exact DP ([What a pass guarantees, and what it does not](tests/README.md#what-a-pass-guarantees-and-what-it-does-not)). One slow test uses GLPK and is skipped when `glpsol` is not on `PATH` (117 passed, 1 skipped). Unset any `ED_OPF_*` variable before running the tests, because these variables also change the solver of the tests. [What each file checks](tests/README.md#what-each-file-checks) in tests/README.md lists the coverage of every test file.
+The suite uses the 5-bus network (and one hand-built 3-bus network), so it needs no internet access, case14 or Julia. Unset any `ED_OPF_*` variable first, because these variables also change the solver of the tests. One slow test uses GLPK and is skipped when `glpsol` is not on `PATH`.
+
+<details>
+<summary>What each test file checks</summary>
+
+| File | Tests | Checks |
+|---|--:|---|
+| `test_failure_model.py` | 8 | failure probabilities equal $`p_{\max}`$ at stage 1, lie in (0, 1) and decrease afterwards |
+| `test_scenario_generator.py` | 8 | sampled failures are binary and match their probabilities over 10,000 scenarios |
+| `test_state_dynamics.py` | 12 | availability after failures and repairs, including the repair delay $`\tau`$ |
+| `test_opf_constraints.py` | 65 | the stage DC-OPF on eight availability patterns: feasibility, power balance, bounds and cost; a failed line in a 3-bus cycle |
+| `test_integration.py` | 9 | the stage LP is deterministic and stateless, dimensions agree, and a one-scenario SAA solves (slow, GLPK) |
+| `test_bigM_validity.py` | 2 | the big-M LP equals a DC-OPF on the surviving network, and $`M_j = 2\pi b_j`$ is valid |
+| `test_derated_mpc_opf.py` | 2 | the derated LP of Near-sighted MPC matches the big-M LP at binary availability and scales with fractional availability |
+| `test_saa_tree.py` | 12 | scenario-tree structure and reproducibility, and small tree SAA solves and rollouts (5 slow) |
+
+The suite does not test the DFL pipeline, repair budgets, the MPC schedule search, SDDiP or the exact DP. [tests/README.md](tests/README.md) gives every test and what a pass guarantees.
+
+</details>
 
 ## License
 
