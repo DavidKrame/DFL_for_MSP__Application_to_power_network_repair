@@ -112,121 +112,27 @@ flowchart LR
 
 A component whose repair completes at a stage is not exposed to the failures of that stage. Dispatch and repairs use only the failures observed so far, so every policy is non-anticipative.
 
-### Failures
+### Model in the code
 
-Failure events are independent across components and stages, with $`\xi^t[k] \sim \mathrm{Bernoulli}(\lambda^t[k])`$. An event fails component $`k`$ only if it is in service, so $`\lambda^t[k]`$ is the failure probability of an operational component. Its logit is a log-linear function of the stage, scaled so that the curve peaks at stage $`t^*`$ with value $`p_{\max}[k]`$:
+| Part of the model | Code | Settings of the experiments |
+|---|---|---|
+| Failure probabilities $`\lambda^t[k]`$ | `ModelParameters` in [`model_parameters.py`](model_parameters.py), constants in [`config.py`](config.py) | $`K = 1.5`$, $`t^* = 1`$; standard ($`p_{\max} \sim \mathcal{U}[0.55, 0.70]`$) or elevated ($`p_{\max} \sim \mathcal{U}[0.80, 0.90]`$) components, drawn once with the model seed 42 |
+| Availability and repairs | rollouts in [`Pseudo_DFL_solver.py`](Pseudo_DFL_solver.py) | $`\tau = 1`$ |
+| Stage dispatch $`Q^0(a^t)`$ (DC-OPF with explicit flows, big-M on failed lines, load shedding) | `StagewiseOPF` in [`Pseudo_DFL_stage_opf.py`](Pseudo_DFL_stage_opf.py), checked by [`test_bigM_validity.py`](tests/README.md#test_bigm_validitypy-2-tests) | $`\alpha = 1{,}000`$ USD/MWh, one hour per stage |
+| Repair costs $`\beta`$ and budget $`B`$ | [`model_parameters.py`](model_parameters.py) | bases $`550\,s`$ (generators) and $`350\,s`$ (lines) USD, scaled by capacity; `--repair-base-scale` sets $`s`$ and `--repair-budget-fraction` sets $`\varphi`$ |
 
-```math
-\mathrm{logit}\,\lambda^t[k] \;=\; \mathrm{logit}\bigl(p_{\max}[k]\bigr)\,
-\frac{(t^* + K)\ln(t + K) - t}{(t^* + K)\ln(t^* + K) - t^*},
-\qquad
-\mathrm{logit}\,p = \ln\frac{p}{1 - p}
-```
-
-The fraction equals 1 at $`t = t^*`$, has zero slope there and decreases afterwards, so for $`p_{\max}[k] > 1/2`$ the probability peaks at stage $`t^*`$ with value $`p_{\max}[k]`$ and then decays towards zero. The experiments use $`K = 1.5`$ and $`t^* = 1`$. With $`t^* = 1`$, the denominator is $`(1 + K)\ln(1 + K) - 1`$, which is positive for $`K`$ above about 0.763 and equals 1.29 at $`K = 1.5`$. Each component is *standard*, with $`p_{\max}[k] \sim \mathcal{U}[0.55, 0.70]`$, or *elevated*, with $`p_{\max}[k] \sim \mathcal{U}[0.80, 0.90]`$, with probability 1/2 each. The class and $`p_{\max}[k]`$ of a component are drawn once with the model seed, 42 in all experiments. The curve is a synthetic choice and is not calibrated to weather data. `ModelParameters` in [`model_parameters.py`](model_parameters.py) computes it, with the constants in [`config.py`](config.py).
-
-<p align="center">
-  <img src="figures/failure_probability_profiles.png" width="65%" alt="Failure probability against the stage for the standard and elevated classes, peaking at stage 1 and decaying afterwards">
-</p>
-<p align="center"><em>Failure probability of an in-service component over the 14 stages, for the two vulnerability classes (K = 1.5, t<sup>*</sup> = 1). Each curve uses the midpoint of its class's p<sub>max</sub> range, and the band spans the range.</em></p>
-
-### Availability and repairs
-
-A failure takes an operational component out of service, and a repair ordered at stage $`t`$ brings it back at stage $`t + \tau`$:
-
-```math
-a^t[k] =
-\left\{
-\begin{array}{lll}
-0 & \text{if } a^{t-1}[k] = 1 \text{ and } \xi^t[k] = 1 & \text{(new failure)},\\[2pt]
-1 & \text{if } a^{t-1}[k] = 0 \text{ and } r^{t-\tau}[k] = 1 & \text{(repair completes)},\\[2pt]
-a^{t-1}[k] & \text{otherwise}
-\end{array}
-\right.
-```
-
-Every component is in service before the event, $`a^0 = \mathbf{1}`$, and no repair is ordered before the first stage, so $`a^1 = \mathbf{1} - \xi^1`$. The rollouts in [`Pseudo_DFL_solver.py`](Pseudo_DFL_solver.py) apply the rule in vector form, $`a^t = a^{t-1} \odot (\mathbf{1} - \xi^t) + (\mathbf{1} - a^{t-1}) \odot r^{t-\tau}`$. All experiments use $`\tau = 1`$. The MIPs of the DFL labels, SAA and SDDiP also handle $`\tau > 1`$, but the inputs of the DFL network contain no repair pipeline, so the learned policy assumes $`\tau = 1`$.
-
-### Dispatch at each stage
-
-Given the availability $`a^t`$, the operator dispatches the network with a DC optimal power flow (DC-OPF) with explicit line flows and load shedding. Its optimal value $`Q^0(a^t)`$ is the dispatch cost of the stage:
-
-```math
-\begin{aligned}
-Q^0(a^t) \;=\; \min_{p_g^t,\,\theta^t,\,f^t,\,d^t}\quad
-& c^\top p_g^t + \alpha\,\mathbf{1}^\top\big(p_l - d^t\big)\\
-\text{s.t.}\quad
-& C f^t = S_g\,p_g^t - S_l\,d^t,\\
-& {-(\mathbf{1} - a_e^t)\odot M} \le f^t - \mathrm{diag}(b)\,C^\top\theta^t \le (\mathbf{1} - a_e^t)\odot M,\\
-& a_e^t \odot \underline{f} \le f^t \le a_e^t \odot \overline{f},\\
-& \mathbf{0} \le p_g^t \le a_g^t \odot \overline{p}_g,
-\qquad \mathbf{0} \le d^t \le p_l,\\
-& {-\theta^{\max}\mathbf{1}} \le \theta^t \le \theta^{\max}\mathbf{1},
-\qquad \theta^t[\mathrm{ref}] = 0,\\[4pt]
-\text{where}\quad
-& M_j = 2\,\theta^{\max} b_j \ \text{ for every line } j,
-\qquad \theta^{\max} = \pi
-\end{aligned}
-```
-
-The availability of a line decides its flow:
-
-```math
-f^t[j] =
-\begin{cases}
-b_j\big(\theta^t[\mathrm{from}(j)] - \theta^t[\mathrm{to}(j)]\big) & \text{if line } j \text{ is available},\\[2pt]
-0 & \text{if line } j \text{ has failed (its end angles are then free)}
-\end{cases}
-```
-
-Here $`p_g^t`$, $`\theta^t`$ and $`f^t`$ are the generator outputs, the voltage angles of the buses and the line flows, and $`d^t`$ is the served demand. $`c`$ is the generation cost, $`\overline{p}_g`$ the generator capacity, $`\underline{f} = -\overline{f}`$ and $`\overline{f}`$ the flow limits of the lines, $`\alpha`$ the value of lost load, $`p_l`$ the demand and $`\mathrm{ref}`$ the reference bus. $`C`$ is the bus-line incidence matrix (+1 where a line leaves a bus, −1 where it enters), $`S_g`$ and $`S_l`$ place generators and loads at buses, and $`\mathrm{diag}(b)`$ holds the line susceptances (the paper calls this matrix $`B`$, a letter kept here for the repair budget). The vector $`M`$ holds the big-M constant of each line, unrelated to the number $`M`$ of perturbations under [Training](#training).
-
-For a failed line, the flow bounds force zero flow, and the big-M rows only require $`\lvert b_j(\theta^t[\mathrm{from}(j)] - \theta^t[\mathrm{to}(j)])\rvert \le 2\theta^{\max} b_j`$, which the angle bounds already imply. A failed line therefore does not couple its end angles, and for a given availability the stage problem is the DC-OPF of the energized subnetwork. A failed generator produces nothing, and since minimum outputs are zero, every availability pattern has a feasible dispatch.
-
-The demand is the same at every stage, so $`Q^0`$ depends on the availability only, which the exact DP and Near-sighted MPC exploit. `StagewiseOPF` in [`Pseudo_DFL_stage_opf.py`](Pseudo_DFL_stage_opf.py) solves this LP in every rollout, and the tests of [`test_bigM_validity.py`](tests/README.md#test_bigm_validitypy-2-tests) check the big-M model against a DC-OPF on the surviving subnetwork.
-
-### Objective, repair costs and budget
-
-The operator minimizes the expected total cost over all non-anticipative policies, in which the decisions of stage $`t`$ depend on the failures up to stage $`t`$ only:
-
-```math
-\begin{aligned}
-\min_{\text{non-anticipative policies}}\quad
-& \mathbb{E}\Bigg[\sum_{t=1}^{T}\Big(c^\top p_g^t + \alpha\,\mathbf{1}^\top\big(p_l - d^t\big) + \beta^\top r^t\Big)\Bigg]\\
-\text{s.t.}\quad
-& a^t \text{ follows the availability transition from } a^0 = \mathbf{1},\\
-& \big(p_g^t, \theta^t, f^t, d^t\big) \text{ is feasible for the stage DC-OPF at } a^t,\\
-& r^t \in \{0,1\}^{N_G+N_E},\quad r^t \le \mathbf{1} - a^t,\qquad t = 1,\dots,T
-\end{aligned}
-```
-
-The expectation runs over the failure process, and only failed components can be repaired. The dispatch does not influence later stages, so each stage contributes its dispatch cost $`Q^0(a^t)`$ plus its repair cost $`\beta^\top r^t`$, and this is how every rollout adds up the cost. The value of lost load is $`\alpha = 1{,}000`$ USD per MWh. Each stage is priced as one hour of operation, so the load shed of a scenario, summed over its 14 stages, is in MWh. Repair costs are proportional to capacity, the maximum output $`\overline{p}_g`$ of a generator and the thermal limit $`\overline{f}`$ of a line. In the budgeted variant, the repair spend of every stage may not exceed $`B`$, the fraction $`\varphi`$ of the cost of repairing all components at once:
-
-```math
-\begin{aligned}
-\beta_g[i] &= 550\,s\,\frac{\overline{p}_g[i]}{\mathrm{mean}(\overline{p}_g)},
-\qquad
-\beta_e[j] = 350\,s\,\frac{\overline{f}[j]}{\mathrm{mean}(\overline{f})},\\[6pt]
-B &= \varphi\,\mathbf{1}^\top\beta = \varphi\,s\,\big(550\,N_G + 350\,N_E\big),
-\qquad \beta^\top r^t \le B \ \text{ at every stage}
-\end{aligned}
-```
-
-The repair-cost scale $`s`$ sets how expensive repairs are relative to load shedding: a generator repair costs $`550\,s`$ USD and a line repair $`350\,s`$ USD on average, and a generator with zero capacity, such as a synchronous condenser of case14, is repaired for free. The experiments use $`s = 100`$ on the 5-bus network and $`s = 45`$ and $`s = 55`$ on case14, chosen with the [repair-cost sweep](#repair-cost-sensitivity), and $`\varphi = 0.3`$, which gives budgets of 85,500, 131,625 and 160,875 USD per stage. Unspent budget is not carried over, so the budget adds no state variable, but it couples the repair decisions of a stage. [`model_parameters.py`](model_parameters.py) sets the costs and the budget.
+The MIPs of the DFL labels, SAA and SDDiP also handle $`\tau > 1`$, but the inputs of the DFL network contain no repair pipeline, so the learned policy assumes $`\tau = 1`$. The experiments use $`s = 100`$ on the 5-bus network and $`s = 45`$ and $`s = 55`$ on case14, and $`\varphi = 0.3`$, which gives budgets of 85,500, 131,625 and 160,875 USD per stage.
 
 ### Test networks
 
 <p align="center">
   <img src="docs/images/toy_network.png" width="55%" alt="Synthetic 5-bus network: buses 1 to 5, generators G1 and G2, three loads and lines L1 to L5 with their data">
 </p>
-<p align="center"><em>The synthetic 5-bus network (<code>toy</code> in the code): generators with capacity and generation cost, loads with demand, and lines with susceptance b and flow limit. Bus 1 is the reference bus, and all seven generators and lines can fail.</em></p>
 
-| Name in code | Network | Buses | Generators | Lines | Loads | Load / capacity | Notes |
-|---|---|--:|--:|--:|--:|---|---|
-| `toy` | synthetic 5-bus | 5 | 2 | 5 | 3 | 180 MW / 250 MW | built in |
-| `case14` | IEEE 14-bus from PGLib-OPF | 14 | 5 | 20 | 11 | 259 MW / 399 MW | downloaded on first use. Three of its five generators are synchronous condensers with zero active-power capacity, and all 20 branches, transformers included, can fail |
-
-The generator, line and load data of the 5-bus network, its repair costs at $`s = 100`$ and the peak failure probabilities drawn with seed 42 are listed in [exact_dp/README.md](exact_dp/README.md#the-model).
+| Name in code | Network | Buses | Generators | Lines | Loads | Notes |
+|---|---|--:|--:|--:|--:|---|
+| `toy` | synthetic 5-bus | 5 | 2 | 5 | 3 | built in; data in [exact_dp/README.md](exact_dp/README.md#the-model) |
+| `case14` | IEEE 14-bus from PGLib-OPF | 14 | 5 | 20 | 11 | downloaded on first use; three generators are synchronous condensers with zero capacity, repaired for free |
 
 ## The DFL policy
 
