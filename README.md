@@ -857,6 +857,10 @@ The suite does not test the DFL pipeline, repair budgets, the MPC schedule searc
 
 </details>
 
+## Acknowledgments
+
+D. Krame Kadurha and A. Zocca are supported by the NWO grant VI.Vidi.233.247, *Power Network Optimization in the Age of Climate Extremes* ([https://doi.org/10.61686/GOOEL09973](https://doi.org/10.61686/GOOEL09973)). We thank SURF ([www.surf.nl](https://www.surf.nl)) for the support in using the National Supercomputer Snellius.
+
 ## License
 
 The code is released under the MIT License; see [LICENSE](LICENSE). The PGLib-OPF case files are not part of this repository. The code downloads them from PGLib-OPF, whose own license applies.
