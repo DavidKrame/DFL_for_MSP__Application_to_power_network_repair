@@ -1,9 +1,9 @@
-# A Decision-Focused Learning Framework for Multistage Stochastic Programs, with Application to Power Network Operations under Stochastic Component Failures
+# Decision-Focused Learning for Multistage Stochastic Programs, with Application to Power Network Repair Scheduling
 
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](#installation)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-This repository holds the code, the stored results and the SLURM job scripts of the paper with this title. A decision-focused learning (DFL) policy, a neural network trained on single-scenario MIP solutions, decides which failed generators and lines of a DC power network to repair at each of 14 stages after a severe-weather event, with and without a per-stage repair budget, on a synthetic 5-bus network and on the IEEE 14-bus network of PGLib-OPF (case14). The baselines (NoRepair, AlwaysRepair, Near-sighted MPC, multistage SAA, SDDiP, and an exact dynamic program for the 5-bus network) are included, and every reported number and figure can be recomputed in seconds from the stored results.
+This repository holds the code, the stored results and the SLURM job scripts of the paper with this title. A decision-focused learning (DFL) policy, a neural network trained on single-scenario MIP solutions, decides which failed generators and lines of a DC power network to repair at each of 14 stages under synthetic, time-varying component failures motivated by severe-weather risk, with and without a per-stage repair budget, on a synthetic 5-bus network and on the IEEE 14-bus network of PGLib-OPF (case14). The baselines (NoRepair, AlwaysRepair, Near-sighted MPC, multistage SAA, SDDiP, and an exact dynamic program for the 5-bus network) are included, and every reported number and figure can be recomputed in seconds from the stored results.
 
 | [Verify the reported numbers](#quick-start) | [Understand the method](#the-problem) | [Rerun the experiments](#reproducing-the-experiments) | [Apply the code to another network](#applying-the-code-to-another-network) |
 |:-:|:-:|:-:|:-:|
@@ -98,7 +98,7 @@ All rows except the last need only the Python environment. The quick checks and 
 
 ## The problem
 
-An operator runs a transmission network for 14 stages after the onset of a severe-weather event. At every stage, each generator and line in service fails with a probability that peaks at the first stage and then decays, and failures are independent across components and stages. The operator observes the failures, dispatches the network that remains, and decides which failed components to repair. Repairs are binary and change the network for all later stages, so minimizing the expected total cost of generation, load shedding and repairs is a multistage stochastic mixed-integer program.
+An operator runs a transmission network for 14 stages under a synthetic failure model that mimics a severe-weather event and is not calibrated to weather data. At every stage, each generator and line in service fails with a probability that peaks at the first stage and then decays, and failures are independent across components and stages. The operator observes the failures, dispatches the network that remains, and decides which failed components to repair. Repairs are binary and change the network for all later stages, so minimizing the expected total cost of generation, load shedding and repairs is a multistage stochastic mixed-integer program.
 
 ```mermaid
 flowchart LR
